@@ -1,8 +1,6 @@
 {
-  "buildCommand": "pip install -r requirements.txt",
-  "runtime": "python3.11",
   "functions": {
-    "api_*.py": {
+    "api/**/*.py": {
       "runtime": "python3.11",
       "maxDuration": 60,
       "memory": 3008
