@@ -92,8 +92,28 @@ class AstroEngine:
             # Step 3: Get the validated birth data dictionary
             birth_data = jm.get_birthdata()
             
-            # Step 4: Generate full astrological data using the validated data
-            astrological_data = jm.generate_astrologicalData(birth_data)
+            # Step 4: Set output path for the library (required!)
+            import tempfile
+            import os
+            import uuid
+            
+            output_dir = tempfile.gettempdir()  # /tmp for serverless
+            output_filename = f"astro_{uuid.uuid4().hex[:8]}"
+            jm.set_output(output_dir, output_filename)
+            
+            # Step 5: Generate full astrological data
+            jm.generate_astrologicalData(birth_data)
+            
+            # Step 6: Read the generated JSON file
+            output_file = os.path.join(output_dir, f"{output_filename}.json")
+            with open(output_file, 'r') as f:
+                astrological_data = json.load(f)
+            
+            # Clean up temp file
+            try:
+                os.remove(output_file)
+            except:
+                pass
             
             # Store for reference
             self.birth_data = birth_data
