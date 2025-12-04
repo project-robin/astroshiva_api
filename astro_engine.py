@@ -52,6 +52,7 @@ class AstroEngine:
             # Step 1: Input birth data - all parameters must be strings
             jm.input_birthdata(
                 name=str(name),
+                place=str(place),  # Place of birth is required
                 gender="male",  # Default gender, can be parameterized later
                 year=str(year),
                 month=str(int(month)),
