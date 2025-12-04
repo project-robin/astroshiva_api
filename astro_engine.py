@@ -41,18 +41,27 @@ class AstroEngine:
             Dictionary with complete chart data
         """
         try:
-            # Create birth data input
+            # Parse date components
+            year, month, day = dob.split('-')
+            hour, minute, second = (tob.split(':') + ['0', '0'])[:3]
+            
+            # Calculate timezone offset (default to UTC if not provided)
+            # For Indian Standard Time: '+5.5'
+            timezone = '+0.0'  # Default to UTC
+            
+            # Create birth data input - all parameters must be strings
             birth_data = jm.input_birthdata(
-                name=name,
-                day=int(dob.split('-')[2]),
-                month=int(dob.split('-')[1]),
-                year=int(dob.split('-')[0]),
-                hour=int(tob.split(':')[0]),
-                minute=int(tob.split(':')[1]),
-                second=int(tob.split(':')[2]) if len(tob.split(':')) > 2 else 0,
-                place=place,
-                latitude=latitude,
-                longitude=longitude
+                name=str(name),
+                gender="male",  # Default gender, can be parameterized later
+                year=str(year),
+                month=str(int(month)),
+                day=str(int(day)),
+                hour=str(int(hour)),
+                min=str(int(minute)),  # NOTE: parameter is 'min' not 'minute'
+                sec=str(int(second)),
+                lattitude=str(latitude) if latitude else "0.0",  # NOTE: double 't'
+                longitude=str(longitude) if longitude else "0.0",
+                timezone=timezone
             )
             
             # Generate full astrological data
