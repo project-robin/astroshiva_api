@@ -3,7 +3,7 @@
     "api/**/*.py": {
       "runtime": "python3.11",
       "maxDuration": 60,
-      "memory": 3008
+      "memory": 1024
     }
   },
   "env": {
