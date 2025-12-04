@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vedic Astrology Calculator - Free & Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .result-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-item h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .result-item pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .error {
+            background: #fee;
+            border-left-color: #f44;
+            color: #c33;
+        }
+
+        .success {
+            background: #efe;
+            border-left-color: #4c4;
+            color: #363;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-box p {
+            font-size: 13px;
+            color: #0056b3;
+            margin: 0;
+        }
+
+        small {
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 Vedic Astrology Calculator</h1>
+        <p class="subtitle">Free, Local & Offline Calculations</p>
+
+        <div class="info-box">
+            <p>✨ Get your complete astrological chart including all 16 divisional charts, Vimshottari Dasha, Nakshatras & Panchang data!</p>
+        </div>
+
+        <form id="birthForm">
+            <div class="form-group">
+                <label for="name">Full Name *</label>
+                <input type="text" id="name" name="name" placeholder="John Doe" required>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="dob">Date of Birth *</label>
+                    <input type="date" id="dob" name="dob" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tob">Time of Birth *</label>
+                    <input type="time" id="tob" name="tob" step="1" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="place">Place of Birth *</label>
+                <input type="text" id="place" name="place" placeholder="New York, USA" required>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="latitude">Latitude</label>
+                    <input type="number" id="latitude" name="latitude" placeholder="40.7128" step="0.0001">
+                    <small>Optional - Enter if known</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="longitude">Longitude</label>
+                    <input type="number" id="longitude" name="longitude" placeholder="-74.0060" step="0.0001">
+                    <small>Optional - Enter if known</small>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn">Generate Astrology Chart</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #667eea;">Calculating your astrological chart...</p>
+        </div>
+
+        <div class="result" id="result">
+            <h2>📊 Your Astrological Chart</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://astroshiva-api.vercel.app/api/api_chart';
+        // const API_URL = '/api/api_chart'; // Use this if testing locally with Vercel dev
+
+        const form = document.getElementById('birthForm');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const resultContent = document.getElementById('resultContent');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Get form data
+            const formData = new FormData(form);
+            const data = {
+                name: formData.get('name'),
+                dob: formData.get('dob'),
+                tob: formData.get('tob') + ':00', // Add seconds
+                place: formData.get('place'),
+                latitude: parseFloat(formData.get('latitude')) || undefined,
+                longitude: parseFloat(formData.get('longitude')) || undefined
+            };
+
+            // Remove undefined values
+            Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
+
+            // Show loading
+            loading.classList.add('active');
+            result.classList.remove('active');
+            submitBtn.disabled = true;
+
+            try {
+                // Make API request
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const resultData = await response.json();
+
+                // Hide loading
+                loading.classList.remove('active');
+                submitBtn.disabled = false;
+
+                // Show result
+                result.classList.add('active');
+
+                if (resultData.status === 'success') {
+                    displaySuccess(resultData.data);
+                } else {
+                    displayError(resultData);
+                }
+
+            } catch (error) {
+                loading.classList.remove('active');
+                submitBtn.disabled = false;
+                result.classList.add('active');
+                displayError({ error: error.message });
+            }
+        });
+
+        function displaySuccess(data) {
+            let html = '';
+
+            // User Details
+            if (data.user_details) {
+                html += `
+                    <div class="result-item success">
+                        <h3>✅ Chart Generated Successfully</h3>
+                        <p><strong>Name:</strong> ${data.user_details.name}</p>
+                        <p><strong>DOB:</strong> ${data.user_details.dob}</p>
+                        <p><strong>TOB:</strong> ${data.user_details.tob}</p>
+                        <p><strong>POB:</strong> ${data.user_details.pob}</p>
+                    </div>
+                `;
+            }
+
+            // Divisional Charts
+            if (data.divisional_charts) {
+                const chartCount = Object.keys(data.divisional_charts).length;
+                html += `
+                    <div class="result-item">
+                        <h3>📊 Divisional Charts (${chartCount} charts)</h3>
+                        <pre>${JSON.stringify(data.divisional_charts, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            // Dashas
+            if (data.dashas) {
+                html += `
+                    <div class="result-item">
+                        <h3>⏳ Vimshottari Dasha</h3>
+                        <pre>${JSON.stringify(data.dashas, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            // Nakshatras
+            if (data.nakshatras) {
+                html += `
+                    <div class="result-item">
+                        <h3>⭐ Nakshatras</h3>
+                        <pre>${JSON.stringify(data.nakshatras, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            // Panchang
+            if (data.panchang) {
+                html += `
+                    <div class="result-item">
+                        <h3>📅 Panchang</h3>
+                        <pre>${JSON.stringify(data.panchang, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            // Balas
+            if (data.balas) {
+                html += `
+                    <div class="result-item">
+                        <h3>💪 Shadbala & Ashtakavarga</h3>
+                        <pre>${JSON.stringify(data.balas, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            resultContent.innerHTML = html;
+        }
+
+        function displayError(error) {
+            resultContent.innerHTML = `
+                <div class="result-item error">
+                    <h3>❌ Error</h3>
+                    <p><strong>Error Type:</strong> ${error.type || 'Unknown'}</p>
+                    <p><strong>Message:</strong> ${error.error || 'An error occurred'}</p>
+                </div>
+            `;
+        }
+
+        // Set default values for testing
+        document.addEventListener('DOMContentLoaded', () => {
+            // You can uncomment these for quick testing
+            // document.getElementById('name').value = 'Test User';
+            // document.getElementById('dob').value = '1990-01-15';
+            // document.getElementById('tob').value = '12:30';
+            // document.getElementById('place').value = 'New York';
+            // document.getElementById('latitude').value = '40.7128';
+            // document.getElementById('longitude').value = '-74.0060';
+        });
+    </script>
+</body>
+</html>
