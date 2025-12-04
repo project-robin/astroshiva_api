@@ -3,10 +3,19 @@ Vedic Astrology Engine - Local Free Implementation
 Uses jyotishyamitra for 100% free, local, offline calculations
 """
 
+import sys
+from pathlib import Path
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
+
+# Add _vendor directory to path for vendored jyotishyamitra
+vendor_path = Path(__file__).parent / "_vendor"
+sys.path.insert(0, str(vendor_path))
+
 import jyotishyamitra as jm
+
+
 
 
 class AstroEngine:
