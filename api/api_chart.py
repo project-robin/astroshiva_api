@@ -6,6 +6,8 @@ Endpoint: /api/api_chart
 import json
 import sys
 from pathlib import Path
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import parse_qs
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -13,40 +15,29 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from astro_engine import AstroEngine
 
 
-async def handler(request):
-    """Main handler for chart generation requests"""
+class handler(BaseHTTPRequestHandler):
+    """Chart generation endpoint using Vercel-compatible handler"""
     
-    if request.method == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, GET',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            }
-        }
-    
-    try:
-        # Parse request body
-        if isinstance(request.body, bytes):
-            body = request.body.decode()
-        else:
-            body = request.body or '{}'
-        
-        data = json.loads(body) if body else {}
-        
-        # Get query params if POST data not provided
-        if not data and hasattr(request, 'query'):
-            data = request.query
-        
-        # Validate required fields
-        required = ['name', 'dob', 'tob', 'place']
-        missing = [f for f in required if f not in data]
-        
-        if missing:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({
+    def do_POST(self):
+        """Handle POST requests"""
+        try:
+            # Read and parse request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            
+            # Parse JSON data
+            try:
+                data = json.loads(body) if body else {}
+            except json.JSONDecodeError as e:
+                self._send_error(400, f'Invalid JSON: {str(e)}')
+                return
+            
+            # Validate required fields
+            required = ['name', 'dob', 'tob', 'place']
+            missing = [f for f in required if f not in data]
+            
+            if missing:
+                self._send_error(400, {
                     'error': 'Missing required fields',
                     'missing': missing,
                     'required': required,
@@ -58,46 +49,108 @@ async def handler(request):
                         'latitude': 40.7128,
                         'longitude': -74.0060
                     }
-                }),
-                'headers': {'Content-Type': 'application/json'}
-            }
-        
-        # Generate chart
-        engine = AstroEngine()
-        chart = engine.generate_full_chart(
-            name=data['name'],
-            dob=data['dob'],
-            tob=data['tob'],
-            place=data['place'],
-            latitude=float(data.get('latitude')) if data.get('latitude') else None,
-            longitude=float(data.get('longitude')) if data.get('longitude') else None
-        )
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
+                })
+                return
+            
+            # Generate chart
+            engine = AstroEngine()
+            chart = engine.generate_full_chart(
+                name=data['name'],
+                dob=data['dob'],
+                tob=data['tob'],
+                place=data['place'],
+                latitude=float(data.get('latitude')) if data.get('latitude') else None,
+                longitude=float(data.get('longitude')) if data.get('longitude') else None
+            )
+            
+            # Send success response
+            response_data = {
                 'status': 'success',
                 'data': chart
-            }, default=str),
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
             }
-        }
-        
-    except json.JSONDecodeError as e:
-        return {
-            'statusCode': 400,
-            'body': json.dumps({'error': f'Invalid JSON: {str(e)}'}),
-            'headers': {'Content-Type': 'application/json'}
-        }
-    except Exception as e:
-        return {
-            'statusCode': 500,
-            'body': json.dumps({
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data, default=str).encode())
+            
+        except Exception as e:
+            self._send_error(500, {
                 'error': str(e),
                 'type': type(e).__name__
-            }),
-            'headers': {'Content-Type': 'application/json'}
-        }
-
+            })
+    
+    def do_GET(self):
+        """Handle GET requests with query parameters"""
+        try:
+            # Parse query string
+            from urllib.parse import urlparse
+            query = urlparse(self.path).query
+            data = {}
+            if query:
+                params = parse_qs(query)
+                # Convert query params (which are lists) to single values
+                data = {k: v[0] if len(v) == 1 else v for k, v in params.items()}
+            
+            # Validate required fields
+            required = ['name', 'dob', 'tob', 'place']
+            missing = [f for f in required if f not in data]
+            
+            if missing:
+                self._send_error(400, {
+                    'error': 'Missing required fields',
+                    'missing': missing,
+                    'required': required,
+                    'note': 'Use POST method for complex requests or provide all required query parameters'
+                })
+                return
+            
+            # Generate chart
+            engine = AstroEngine()
+            chart = engine.generate_full_chart(
+                name=data['name'],
+                dob=data['dob'],
+                tob=data['tob'],
+                place=data['place'],
+                latitude=float(data.get('latitude')) if data.get('latitude') else None,
+                longitude=float(data.get('longitude')) if data.get('longitude') else None
+            )
+            
+            # Send success response
+            response_data = {
+                'status': 'success',
+                'data': chart
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data, default=str).encode())
+            
+        except Exception as e:
+            self._send_error(500, {
+                'error': str(e),
+                'type': type(e).__name__
+            })
+    
+    def do_OPTIONS(self):
+        """Handle OPTIONS requests for CORS"""
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+    
+    def _send_error(self, status_code, error_data):
+        """Helper method to send error responses"""
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        
+        if isinstance(error_data, str):
+            error_data = {'error': error_data}
+        
+        self.wfile.write(json.dumps(error_data).encode())
