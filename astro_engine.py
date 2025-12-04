@@ -24,7 +24,8 @@ class AstroEngine:
         tob: str,
         place: str,
         latitude: float = None,
-        longitude: float = None
+        longitude: float = None,
+        timezone: str = None
     ) -> Dict[str, Any]:
         """
         Generate complete astrological chart for birth data
@@ -33,26 +34,44 @@ class AstroEngine:
             name: Person's name
             dob: Date of birth (YYYY-MM-DD)
             tob: Time of birth (HH:MM:SS)
-            place: Place of birth
-            latitude: Optional latitude coordinate
-            longitude: Optional longitude coordinate
+            place: Place of birth (for reference only)
+            latitude: Latitude coordinate (REQUIRED for accurate calculations)
+            longitude: Longitude coordinate (REQUIRED for accurate calculations)
+            timezone: GMT timezone offset as string (e.g., '+5.5' for IST, '-5.0' for EST)
+                     If not provided, will be estimated from longitude
         
         Returns:
             Dictionary with complete chart data
         """
         try:
+            # Validate required coordinates
+            if latitude is None or longitude is None:
+                raise ValueError(
+                    "Latitude and Longitude are required for accurate astrological calculations. "
+                    "Place name alone cannot provide precise astronomical positions."
+                )
+            
             # Parse date components
             year, month, day = dob.split('-')
             hour, minute, second = (tob.split(':') + ['0', '0'])[:3]
             
-            # Calculate timezone offset (default to UTC if not provided)
-            # For Indian Standard Time: '+5.5'
-            timezone = '+0.0'  # Default to UTC
+            # Calculate timezone offset if not provided
+            # Rough approximation: 15 degrees longitude = 1 hour offset from GMT
+            if timezone is None:
+                # Calculate from longitude (rough approximation)
+                tz_hours = longitude / 15.0
+                # Round to nearest 0.5 hour
+                tz_rounded = round(tz_hours * 2) / 2
+                timezone = f"{tz_rounded:+.1f}" if tz_rounded >= 0 else f"{tz_rounded:.1f}"
+            
+            # Ensure timezone is in correct string format (e.g., "+5.5" or "-4.0")
+            if not isinstance(timezone, str):
+                timezone = str(timezone)
             
             # Step 1: Input birth data - all parameters must be strings
             jm.input_birthdata(
                 name=str(name),
-                place=str(place),  # Place of birth is required
+                place=str(place),  # Place of birth (for reference only)
                 gender="male",  # Default gender, can be parameterized later
                 year=str(year),
                 month=str(int(month)),
@@ -60,9 +79,9 @@ class AstroEngine:
                 hour=str(int(hour)),
                 min=str(int(minute)),  # NOTE: parameter is 'min' not 'minute'
                 sec=str(int(second)),
-                lattitude=str(latitude) if latitude else "0.0",  # NOTE: double 't'
-                longitude=str(longitude) if longitude else "0.0",
-                timezone=timezone
+                lattitude=str(latitude),  # NOTE: double 't', REQUIRED
+                longitude=str(longitude),  # REQUIRED
+                timezone=timezone  # Must be string like "+5.5" or "-4.0"
             )
             
             # Step 2: Validate the birth data

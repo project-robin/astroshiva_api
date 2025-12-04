@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,7 +55,8 @@
             font-size: 14px;
         }
 
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
@@ -63,7 +65,8 @@
             transition: all 0.3s ease;
         }
 
-        input:focus, select:focus {
+        input:focus,
+        select:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -124,8 +127,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .result {
@@ -204,13 +212,17 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🌟 Vedic Astrology Calculator</h1>
         <p class="subtitle">Free, Local & Offline Calculations</p>
 
         <div class="info-box">
-            <p>✨ Get your complete astrological chart including all 16 divisional charts, Vimshottari Dasha, Nakshatras & Panchang data!</p>
+            <p>✨ Get your complete astrological chart including all 16 divisional charts, Vimshottari Dasha, Nakshatras
+                & Panchang data!</p>
+            <p style="margin-top: 8px;"><strong>⚠️ Important:</strong> Latitude & Longitude are REQUIRED for accurate
+                astronomical calculations. Use Google Maps to find coordinates.</p>
         </div>
 
         <form id="birthForm">
@@ -233,20 +245,21 @@
 
             <div class="form-group">
                 <label for="place">Place of Birth *</label>
-                <input type="text" id="place" name="place" placeholder="New York, USA" required>
+                <input type="text" id="place" name="place" placeholder="Ahmednagar, India" required>
+                <small>For reference only - enter coordinates below</small>
             </div>
 
             <div class="row">
                 <div class="form-group">
-                    <label for="latitude">Latitude</label>
-                    <input type="number" id="latitude" name="latitude" placeholder="40.7128" step="0.0001">
-                    <small>Optional - Enter if known</small>
+                    <label for="latitude">Latitude *</label>
+                    <input type="number" id="latitude" name="latitude" placeholder="19.0948" step="0.0001" required>
+                    <small>Required for accurate calculations</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="longitude">Longitude</label>
-                    <input type="number" id="longitude" name="longitude" placeholder="-74.0060" step="0.0001">
-                    <small>Optional - Enter if known</small>
+                    <label for="longitude">Longitude *</label>
+                    <input type="number" id="longitude" name="longitude" placeholder="74.7489" step="0.0001" required>
+                    <small>Required for accurate calculations</small>
                 </div>
             </div>
 
@@ -421,4 +434,5 @@
         });
     </script>
 </body>
+
 </html>
