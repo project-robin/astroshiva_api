@@ -49,8 +49,8 @@ class AstroEngine:
             # For Indian Standard Time: '+5.5'
             timezone = '+0.0'  # Default to UTC
             
-            # Create birth data input - all parameters must be strings
-            birth_data = jm.input_birthdata(
+            # Step 1: Input birth data - all parameters must be strings
+            jm.input_birthdata(
                 name=str(name),
                 gender="male",  # Default gender, can be parameterized later
                 year=str(year),
@@ -64,7 +64,15 @@ class AstroEngine:
                 timezone=timezone
             )
             
-            # Generate full astrological data
+            # Step 2: Validate the birth data
+            validation_result = jm.validate_birthdata()
+            if validation_result != "SUCCESS":
+                raise ValueError(f"Birth data validation failed: {validation_result}")
+            
+            # Step 3: Get the validated birth data dictionary
+            birth_data = jm.get_birthdata()
+            
+            # Step 4: Generate full astrological data using the validated data
             astrological_data = jm.generate_astrologicalData(birth_data)
             
             # Store for reference
