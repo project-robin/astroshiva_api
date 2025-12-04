@@ -1,16 +1,15 @@
 """
 Vercel Serverless Function - Astrology Chart Generation
-Deploy to: api/chart.py
+Endpoint: /api/api_chart
 """
 
 import json
 from astro_engine import AstroEngine
 
 
-def handler(request):
+async def handler(request):
     """Main handler for chart generation requests"""
     
-    # Handle CORS
     if request.method == 'OPTIONS':
         return {
             'statusCode': 200,
@@ -21,24 +20,40 @@ def handler(request):
             }
         }
     
-    # Parse request
     try:
-        if request.method == 'POST':
-            data = json.loads(request.body) if request.body else {}
+        # Parse request body
+        if isinstance(request.body, bytes):
+            body = request.body.decode()
         else:
-            data = request.query_string_params or {}
+            body = request.body or '{}'
+        
+        data = json.loads(body) if body else {}
+        
+        # Get query params if POST data not provided
+        if not data and hasattr(request, 'query'):
+            data = request.query
         
         # Validate required fields
         required = ['name', 'dob', 'tob', 'place']
         missing = [f for f in required if f not in data]
+        
         if missing:
             return {
                 'statusCode': 400,
                 'body': json.dumps({
                     'error': 'Missing required fields',
                     'missing': missing,
-                    'required': required
-                })
+                    'required': required,
+                    'example': {
+                        'name': 'John Doe',
+                        'dob': '1990-01-15',
+                        'tob': '12:30:00',
+                        'place': 'New York',
+                        'latitude': 40.7128,
+                        'longitude': -74.0060
+                    }
+                }),
+                'headers': {'Content-Type': 'application/json'}
             }
         
         # Generate chart
@@ -48,8 +63,8 @@ def handler(request):
             dob=data['dob'],
             tob=data['tob'],
             place=data['place'],
-            latitude=float(data.get('latitude', 0)) if data.get('latitude') else None,
-            longitude=float(data.get('longitude', 0)) if data.get('longitude') else None
+            latitude=float(data.get('latitude')) if data.get('latitude') else None,
+            longitude=float(data.get('longitude')) if data.get('longitude') else None
         )
         
         return {
@@ -64,15 +79,19 @@ def handler(request):
             }
         }
         
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': 'Invalid JSON'}),
+            'body': json.dumps({'error': f'Invalid JSON: {str(e)}'}),
             'headers': {'Content-Type': 'application/json'}
         }
     except Exception as e:
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)}),
+            'body': json.dumps({
+                'error': str(e),
+                'type': type(e).__name__
+            }),
             'headers': {'Content-Type': 'application/json'}
         }
+

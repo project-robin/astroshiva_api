@@ -1,12 +1,12 @@
 """
 Vercel Serverless Function - Health Check
-Deploy to: api/health.py
+Endpoint: /api/api_health
 """
 
 import json
 
 
-def handler(request):
+async def handler(request):
     """Health check endpoint"""
     return {
         'statusCode': 200,

@@ -1,13 +1,13 @@
 """
 Vercel Serverless Function - Test Calculation
-Deploy to: api/test.py
+Endpoint: /api/api_test
 """
 
 import json
 from astro_engine import AstroEngine
 
 
-def handler(request):
+async def handler(request):
     """Test calculation endpoint"""
     try:
         engine = AstroEngine()
@@ -28,7 +28,10 @@ def handler(request):
                 'details': {
                     'divisional_charts': len(chart.get('divisional_charts', {})),
                     'dasha_periods': len(chart.get('dashas', {}).get('vimshottari', {}).get('mahadasha', [])),
-                    'test_data': chart
+                    'sample_data': {
+                        'name': chart.get('user_details', {}).get('name'),
+                        'ascendant': chart.get('divisional_charts', {}).get('D1', {}).get('ascendant')
+                    }
                 }
             }, default=str),
             'headers': {
@@ -42,7 +45,11 @@ def handler(request):
             'statusCode': 500,
             'body': json.dumps({
                 'status': 'error',
-                'error': str(e)
+                'error': str(e),
+                'type': type(e).__name__
             }),
-            'headers': {'Content-Type': 'application/json'}
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
         }
