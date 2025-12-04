@@ -1,0 +1,22 @@
+# Files to exclude from Vercel deployment
+firebase-debug.log
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.git
+.gitignore
+.venv
+venv
+env
+node_modules
+.DS_Store
+*.md
+!README.md
+!VERCEL_DEPLOYMENT.md
