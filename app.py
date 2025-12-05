@@ -7,7 +7,7 @@ Deploy on Render with frontend on Vercel
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from astro_engine import AstroEngine
 import traceback
@@ -49,6 +49,7 @@ class ChartRequest(BaseModel):
     latitude: float = Field(..., description="Latitude coordinate", example=40.7128)
     longitude: float = Field(..., description="Longitude coordinate", example=-74.0060)
     timezone: Optional[str] = Field(None, description="Timezone offset (e.g., +5.5)", example="+5.5")
+    charts: Optional[List[str]] = Field(None, description="List of charts to generate (e.g. ['D1', 'D9'])")
 
     class Config:
         schema_extra = {
@@ -59,7 +60,8 @@ class ChartRequest(BaseModel):
                 "place": "Ahmednagar, Maharashtra",
                 "latitude": 19.0948,
                 "longitude": 74.7489,
-                "timezone": "+5.5"
+                "timezone": "+5.5",
+                "charts": ["D1", "D9", "D10"]
             }
         }
 
@@ -129,7 +131,8 @@ async def generate_chart(request: ChartRequest):
             place=request.place,
             latitude=request.latitude,
             longitude=request.longitude,
-            timezone=request.timezone
+            timezone=request.timezone,
+            charts=request.charts
         )
         
         return SuccessResponse(status="success", data=chart)
@@ -164,10 +167,13 @@ async def generate_chart_get(
     place: str = Query(..., description="Place of birth"),
     latitude: float = Query(..., description="Latitude"),
     longitude: float = Query(..., description="Longitude"),
-    timezone: Optional[str] = Query(None, description="Timezone offset")
+    timezone: Optional[str] = Query(None, description="Timezone offset"),
+    charts: Optional[str] = Query(None, description="Comma-separated list of charts (e.g. 'D1,D9')")
 ):
     """Generate chart using GET parameters (alternative to POST)"""
     try:
+        charts_list = [c.strip() for c in charts.split(',')] if charts else None
+        
         chart = engine.generate_full_chart(
             name=name,
             dob=dob,
@@ -175,7 +181,8 @@ async def generate_chart_get(
             place=place,
             latitude=latitude,
             longitude=longitude,
-            timezone=timezone
+            timezone=timezone,
+            charts=charts_list
         )
         
         return {"status": "success", "data": chart}

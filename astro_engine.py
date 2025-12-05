@@ -54,7 +54,8 @@ class AstroEngine:
         place: str,
         latitude: float = None,
         longitude: float = None,
-        timezone: str = None
+        timezone: str = None,
+        charts: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Generate complete astrological chart for birth data
@@ -143,7 +144,7 @@ class AstroEngine:
                     "timezone_offset": tz_offset,
                     "generated_at": datetime.now().isoformat()
                 },
-                "divisional_charts": self._extract_divisional_charts(chart),
+                "divisional_charts": self._extract_divisional_charts(chart, charts_filter=charts),
                 "balas": self._extract_balas(chart),
                 "dashas": self._extract_dashas(chart),
                 "nakshatra": self._extract_nakshatras(chart),
@@ -151,14 +152,16 @@ class AstroEngine:
                 "yogas": self._extract_yogas(chart),
                 "doshas": self._calculate_doshas(chart),
                 "meta": {
-                     "api_version": "1.1.0",
+                     "api_version": "2.0.0",
                      "calculation_method": "nc_lahiri",
                      "ayanamsa": "Lahiri",
-                     "engine": "astro-shiva-engine-v2"
+                     "engine": "astro-shiva-engine-v2",
+                     "features": ["Jaimini", "KP", "Avasthas", "Transits"]
                 }
             }
             
             # Enrich with direct calculations for missing data
+            # This now also populates KP, Avasthas etc via _enrich_chart_data -> methods
             self._enrich_chart_data(output, birth_datetime, latitude, longitude, tz_offset)
             
             return output
@@ -169,9 +172,14 @@ class AstroEngine:
             print(f"DETAILED ERROR in generate_full_chart:\n{error_details}")
             raise ValueError(f"Error generating chart: {str(e)}")
     
-    def _extract_divisional_charts(self, chart) -> Dict[str, Any]:
-        """Extract all divisional charts (D1-D60)"""
-        charts = {}
+    
+    def _extract_divisional_charts(self, chart, charts_filter=None) -> Dict[str, Any]:
+        """Extract divisional charts (D1-D60), optionally filtered"""
+        charts_out = {}
+        
+        # Default to all if None
+        # If specific list provided, always include D1
+        target_charts = [c.upper() for c in charts_filter] if charts_filter else None
         
         try:
             # Create a map of D1 degrees for calculating Varga degrees
@@ -185,16 +193,19 @@ class AstroEngine:
                     d1_degrees[p.celestial_body] = deg
 
             # D1 (Rashi chart) is main
-            charts['D1'] = self._format_chart_data(chart.d1_chart, 'D1', d1_degrees)
+            if not target_charts or 'D1' in target_charts:
+                charts_out['D1'] = self._format_chart_data(chart.d1_chart, 'D1', d1_degrees)
             
             # D2-D60 divisional charts
             for chart_name, divisional_chart in chart.divisional_charts.items():
                 c_name_upper = chart_name.upper()
-                charts[c_name_upper] = self._format_chart_data(divisional_chart, c_name_upper, d1_degrees)
+                if target_charts and c_name_upper not in target_charts:
+                    continue
+                charts_out[c_name_upper] = self._format_chart_data(divisional_chart, c_name_upper, d1_degrees)
         except Exception as e:
             print(f"Warning: Could not extract all divisional charts: {e}")
         
-        return charts
+        return charts_out
     
     def _calculate_varga_degree(self, d1_degree: float, harmonic: int) -> float:
         """Calculate planet's degree within a Varga sign"""
@@ -241,6 +252,14 @@ class AstroEngine:
             if hasattr(chart_obj, 'planets'):
                 # For RasiChart (D1) which has explicit planets list
                 for planet in chart_obj.planets:
+                    dignity_val = getattr(planet, 'dignities', None)
+                    dignity_clean = None
+                    if dignity_val:
+                        if isinstance(dignity_val, dict):
+                            dignity_clean = dignity_val.get('dignity', 'neutral')
+                        elif hasattr(dignity_val, 'dignity'):
+                             dignity_clean = dignity_val.dignity
+                        
                     formatted["planets"][planet.celestial_body] = {
                         "sign": planet.sign,
                         "degree": float(planet.sign_degrees) if hasattr(planet, 'sign_degrees') else None,
@@ -248,14 +267,11 @@ class AstroEngine:
                         "pada": planet.pada,
                         "house": planet.house,
                         "retrograde": getattr(planet, 'retrograde', False),
-                        "dignities": getattr(planet, 'dignities', None),
+                        "dignity": dignity_clean,
                         "aspects": getattr(planet, 'aspects', {}),
                         "is_combust": False,
                         "speed": 0.0 # Will be populated enrichment
                     }
-                    
-                    if formatted["planets"][planet.celestial_body]["dignities"] and hasattr(formatted["planets"][planet.celestial_body]["dignities"], 'to_dict'):
-                          formatted["planets"][planet.celestial_body]["dignities"] = formatted["planets"][planet.celestial_body]["dignities"].to_dict()
             else:
                 # For DivisionalChart (D2-D60) which stores planets in houses
                 harmonic = int(chart_name[1:]) if chart_name.startswith('D') and chart_name[1:].isdigit() else 1
@@ -352,6 +368,7 @@ class AstroEngine:
             }
             
             d1_planets = output['divisional_charts']['D1']['planets']
+            planet_positions_deg = {} # For Maitri/Jaimini
             
             for p_name, p_id in planets_map.items():
                 if p_name in d1_planets:
@@ -359,17 +376,311 @@ class AstroEngine:
                     res = swe.calc_ut(jd_ut, p_id, swe.FLG_SWIEPH | swe.FLG_SIDEREAL | swe.FLG_SPEED)
                     # res is (long, lat, dist, speed_long, speed_lat, speed_dist)
                     
-                    speed = res[3]
+                    deg_total = res[0]
+                    speed = res[3] if len(res) > 3 else 0.0
+                    
+                    # Normalize degree
+                    deg_norm = deg_total % 30
+                    sign_idx = int(deg_total / 30) + 1 # 1-based
+                    
+                    planet_positions_deg[p_name] = {"total_degree": deg_total, "sign": sign_idx, "degree": deg_norm}
+
                     if p_name == 'Ketu':
                         speed = speed # Node speed
                     
-                    d1_planets[p_name]['speed'] = speed
-                    d1_planets[p_name]['speed_status'] = 'fast' if abs(speed) > self._get_avg_speed(p_name)*1.1 else ('slow' if abs(speed) < self._get_avg_speed(p_name)*0.9 else 'normal')
+                    p_data = d1_planets[p_name]
+                    p_data['speed'] = speed
+                    p_data['speed_status'] = 'fast' if abs(speed) > self._get_avg_speed(p_name)*1.1 else ('slow' if abs(speed) < self._get_avg_speed(p_name)*0.9 else 'normal')
+                    
+                    # Update precise degrees if missing or rough
+                    p_data['sign_id'] = sign_idx
+                    p_data['degree'] = deg_norm
+                    p_data['total_degree'] = deg_total
+                    
+                    # --- NEW: KP System ---
+                    kp_info = self._calculate_kp_details(deg_total)
+                    p_data['kp'] = kp_info
+
+                    # --- NEW: Avasthas ---
+                    p_data['avasthas'] = self._calculate_avasthas(p_name, deg_norm, sign_idx, p_data.get('dignities', {}).get('dignity', 'neutral'))
+
+            # --- NEW: Jaimini Karakas ---
+            output['jaimini_karakas'] = self._calculate_jaimini_karakas(d1_planets)
+            
+            # --- NEW: Panchadha Maitri ---
+            output['panchadha_maitri'] = self._calculate_panchadha_maitri(planet_positions_deg)
+
+            # --- NEW: Transits ---
+            output['current_transits'] = self._calculate_transits(output['divisional_charts']['D1']['ascendant']['sign'], output['divisional_charts']['D1']['planets']['Moon']['sign'])
 
         except Exception as e:
              # print(f"Warning: Enrichment failed: {e}")
              # Don't spam logs if it fails, just skip
              pass
+        
+    def _calculate_jaimini_karakas(self, planets_data):
+        """Calculate 7 Chara Karakas based on degrees"""
+        # Exclude Rahu/Ketu for 7-karaka scheme
+        candidates = []
+        for p_name in ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn']:
+            if p_name in planets_data:
+                deg = planets_data[p_name].get('degree', 0)
+                # Jaimini uses degrees within sign (0-30), seconds matter
+                candidates.append({'name': p_name, 'degree': deg})
+        
+        # Sort descending
+        candidates.sort(key=lambda x: x['degree'], reverse=True)
+        
+        karakas = {}
+        names = ['Atmakaraka', 'Amatyakaraka', 'Bhratrukaraka', 'Matrukaraka', 'Putrakaraka', 'Gnatikaraka', 'Darakaraka']
+        
+        for i, k_name in enumerate(names):
+            if i < len(candidates):
+                karakas[k_name] = {
+                    "planet": candidates[i]['name'],
+                    "description": self._get_karaka_description(k_name)
+                }
+        return karakas
+
+    def _get_karaka_description(self, k_name):
+        return {
+            'Atmakaraka': 'Significator of the Soul/Self',
+            'Amatyakaraka': 'Significator of Career/Minister',
+            'Bhratrukaraka': 'Significator of Siblings/Guru',
+            'Matrukaraka': 'Significator of Mother',
+            'Putrakaraka': 'Significator of Children',
+            'Gnatikaraka': 'Significator of Relations/Enemies',
+            'Darakaraka': 'Significator of Spouse',
+        }.get(k_name, '')
+
+    def _calculate_avasthas(self, planet, degree_in_sign, sign_num, dignity_str):
+        """Calculate Baaladi (Age) and Jagradadi (Alertness) Avasthas"""
+        avasthas = {"baaladi": {}, "jagradadi": {}}
+        
+        # 1. Baaladi (Age)
+        # Odd Signs: 1, 3, 5, 7, 9, 11
+        is_odd = (sign_num % 2 != 0)
+        
+        states = ["Infant (Baala)", "Young (Kumara)", "Adolescent (Yuva)", "Old (Vriddha)", "Dead (Mrita)"]
+        
+        # 0-6, 6-12, 12-18, 18-24, 24-30
+        idx = int(degree_in_sign / 6)
+        if idx > 4: idx = 4
+        
+        if not is_odd:
+            # Reverse order for even signs
+            idx = 4 - idx
+            
+        avasthas["baaladi"] = {
+            "state": states[idx].split(' ')[0], 
+            "full_name": states[idx]
+        }
+        
+        # 2. Jagradadi (Alertness)
+        # Awake: Own/Exalted, Dreaming: Friend/Neutral, Sleep: Enemy/Debilitated
+        state_jag = "Dreaming" # Default
+        dignity = str(dignity_str).lower()
+        
+        if "exalted" in dignity or "own" in dignity or "moolatrikona" in dignity:
+            state_jag = "Awake"
+        elif "debilitated" in dignity or "enemy" in dignity or "great_enemy" in dignity:
+             state_jag = "Asleep"
+        
+        avasthas["jagradadi"] = {"state": state_jag}
+        
+        return avasthas
+
+    def _calculate_kp_details(self, total_degree):
+        """Calculate KP Star Lord, Sub Lord, Sub-Sub Lord"""
+        # Nakshatra span = 13 deg 20 min = 13.3333 deg
+        # Total 360 deg / 27 = 13.3333
+        nak_span = 360.0 / 27.0
+        
+        nak_idx = int(total_degree / nak_span)
+        # deg_in_nak = total_degree % nak_span
+        
+        # Lords sequence (starting from Ashwini/Ketu)
+        # KET, VEN, SUN, MON, MAR, RAH, JUP, SAT, MER
+        meta_lords = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"]
+        dasha_years = {"Ketu": 7, "Venus": 20, "Sun": 6, "Moon": 10, "Mars": 7, "Rahu": 18, "Jupiter": 16, "Saturn": 19, "Mercury": 17}
+        total_years = 120
+        
+        # Star Lord
+        star_lord = meta_lords[nak_idx % 9]
+        
+        # Sub Lord calculation
+        # The nakshatra (13.33 deg) is divided in proportion to Dasha years
+        # We need to find which slice 'deg_in_nak' falls into.
+        # The sequence of sub-lords starts from the Star Lord itself.
+        
+        start_lord_idx = meta_lords.index(star_lord)
+        
+        remaining_deg = total_degree % nak_span
+        current_deg_pointer = 0.0
+        
+        sub_lord = None
+        sub_sub_lord = None
+        
+        # Find Sub Lord
+        for i in range(9):
+            idx = (start_lord_idx + i) % 9
+            l_name = meta_lords[idx]
+            years = dasha_years[l_name]
+            
+            # Span = (Years / 120) * 13.3333
+            span = (years / total_years) * nak_span
+            
+            if current_deg_pointer + span >= remaining_deg:
+                sub_lord = l_name
+                
+                # Setup for Sub-Sub Lord
+                # We need position WITHIN this sub-lord span
+                deg_in_sub = remaining_deg - current_deg_pointer
+                
+                # Iterate again for SS Lord
+                ss_pointer = 0.0
+                ss_start_idx = idx # Starts from Sub Lord
+                
+                for j in range(9):
+                    idx_ss = (ss_start_idx + j) % 9
+                    ss_name = meta_lords[idx_ss]
+                    years_ss = dasha_years[ss_name]
+                    
+                    # Span of SS = (Years / 120) * Sub-Lord-Span
+                    span_ss = (years_ss / total_years) * span
+                    
+                    if ss_pointer + span_ss >= deg_in_sub:
+                        sub_sub_lord = ss_name
+                        break
+                    ss_pointer += span_ss
+                
+                break
+            
+            current_deg_pointer += span
+            
+        return {
+            "sign_lord": self._get_sign_lord(int(total_degree/30)+1),
+            "nakshatra_lord": star_lord,
+            "sub_lord": sub_lord,
+            "sub_sub_lord": sub_sub_lord
+        }
+
+    def _get_sign_lord(self, sign_num):
+        # 1-12
+        lords = [None, "Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"]
+        if 1 <= sign_num <= 12: return lords[sign_num]
+        return None
+
+    def _calculate_panchadha_maitri(self, planet_deg_map):
+        """Calculate 5-fold friendship matrix"""
+        # Natural Relationships (Naisargik)
+        natural = {
+            "Sun": {"friends": ["Moon", "Mars", "Jupiter"], "enemies": ["Venus", "Saturn"]},
+            "Moon": {"friends": ["Sun", "Mercury"], "enemies": []}, # Rest neutral
+            "Mars": {"friends": ["Sun", "Moon", "Jupiter"], "enemies": ["Mercury"]},
+            "Mercury": {"friends": ["Sun", "Venus"], "enemies": ["Moon"]},
+            "Jupiter": {"friends": ["Sun", "Moon", "Mars"], "enemies": ["Mercury", "Venus"]},
+            "Venus": {"friends": ["Mercury", "Saturn"], "enemies": ["Sun", "Moon"]},
+            "Saturn": {"friends": ["Mercury", "Venus"], "enemies": ["Sun", "Moon", "Mars"]}
+        }
+        
+        matrix = {}
+        for p1 in natural.keys():
+            if p1 not in planet_deg_map: continue
+            
+            matrix[p1] = {}
+            for p2 in natural.keys():
+                if p1 == p2: continue
+                if p2 not in planet_deg_map: continue
+                
+                # 1. Natural
+                nat_rel = "Neutral"
+                if p2 in natural[p1]["friends"]: nat_rel = "Friend"
+                elif p2 in natural[p1]["enemies"]: nat_rel = "Enemy"
+                
+                # 2. Temporary (Tatkalik)
+                # Friends in 2, 3, 4, 10, 11, 12 from p1
+                h1 = planet_deg_map[p1]["sign"]
+                h2 = planet_deg_map[p2]["sign"]
+                
+                diff = (h2 - h1) % 12
+                if diff < 0: diff += 12
+                house_pos = diff + 1
+                
+                tat_rel = "Enemy"
+                if house_pos in [2, 3, 4, 10, 11, 12]:
+                    tat_rel = "Friend"
+                
+                # 3. Combined
+                score = 0
+                if nat_rel == "Friend": score += 1
+                elif nat_rel == "Enemy": score -= 1
+                
+                if tat_rel == "Friend": score += 1
+                elif tat_rel == "Enemy": score -= 1
+                
+                final_rel = "Neutral"
+                if score >= 2: final_rel = "Great Friend"
+                elif score == 1: final_rel = "Friend"
+                elif score == 0: final_rel = "Neutral"
+                elif score == -1: final_rel = "Enemy"
+                elif score <= -2: final_rel = "Great Enemy"
+                
+                matrix[p1][p2] = final_rel
+        return matrix
+
+    def _calculate_transits(self, birth_asc_sign, birth_moon_sign):
+        """Calculate current transit positions"""
+        transits = {}
+        try:
+            import swisseph as swe
+            now = datetime.now()
+            # UTC conversion approx
+            jd_now = swe.julday(now.year, now.month, now.day, now.hour + now.minute/60.0)
+            
+            planets = {
+                'Sun': swe.SUN, 'Moon': swe.MOON, 'Mars': swe.MARS, 
+                'Mercury': swe.MERCURY, 'Jupiter': swe.JUPITER, 
+                'Venus': swe.VENUS, 'Saturn': swe.SATURN, 'Rahu': swe.MEAN_NODE, 'Ketu': swe.MEAN_NODE
+            }
+            
+            swe.set_sid_mode(swe.SIDM_LAHIRI)
+            
+            signs = ["", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
+            
+            for p_name, p_id in planets.items():
+                res = swe.calc_ut(jd_now, p_id, swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
+                deg_total = res[0]
+                sign_num = int(deg_total / 30) + 1
+                deg_rem = deg_total % 30
+                
+                sign_name = signs[sign_num] if 1 <= sign_num <= 12 else "Unknown"
+                
+                # Reference to Birth Moon (Rashi)
+                from_moon = (sign_num - self._get_sign_num(birth_moon_sign)) % 12
+                if from_moon < 0: from_moon += 12
+                house_from_moon = from_moon + 1
+                
+                transits[p_name] = {
+                    "current_sign": sign_name,
+                    "current_degree": deg_rem,
+                    "house_from_birth_moon": house_from_moon,
+                    "is_retrograde": res[3] < 0 if len(res)>3 else False
+                }
+                
+        except Exception as e:
+            # print(f"Transit Error: {e}")
+            pass
+            
+        return transits
+
+    def _get_sign_num(self, sign_name):
+        signs = {
+           "Aries": 1, "Taurus": 2, "Gemini": 3, "Cancer": 4, 
+           "Leo": 5, "Virgo": 6, "Libra": 7, "Scorpio": 8, 
+           "Sagittarius": 9, "Capricorn": 10, "Aquarius": 11, "Pisces": 12
+        }
+        return signs.get(sign_name, 1) # Default 1
         
     def _get_avg_speed(self, planet_name):
         return {
@@ -649,21 +960,119 @@ class AstroEngine:
                                 "description": f"Benefic {b} in 10th from Moon. Reputation and career success."
                             })
 
-            # 5. Kemadruma Yoga (No planets in 2nd and 12th from Moon)
+             # 5. Kemadruma Yoga (No planets in 2nd and 12th from Moon)
             if "Moon" in planets:
                 moon_h = get_house("Moon")
                 second_h = (moon_h % 12) + 1
                 twelfth_h = ((moon_h - 2) % 12) + 1
                 
-                has_planet_2 = any(p.house == second_h for name, p in planets.items() if name not in ["Moon", "Sun", "Rahu", "Ketu"])
-                has_planet_12 = any(p.house == twelfth_h for name, p in planets.items() if name not in ["Moon", "Sun", "Rahu", "Ketu"])
+                # Check occupants of 2nd and 12th from other planets map (harder without house occupants list directly accessible here easily)
+                # Iterate planets
+                has_planet_2 = False
+                has_planet_12 = False
+                
+                for p_name, p in planets.items():
+                    if p_name in ["Moon", "Sun", "Rahu", "Ketu"]: continue
+                    if p.house == second_h: has_planet_2 = True
+                    if p.house == twelfth_h: has_planet_12 = True
                 
                 if not has_planet_2 and not has_planet_12:
                      yogas["other_yogas"].append({
                         "name": "Kemadruma Yoga",
                         "description": "No planets in 2nd or 12th from Moon. Can indicate loneliness or struggles."
                     })
+
+            # 6. Parivartana Yoga (Exchange of Signs)
+            # Map sign number -> Lord
+            sign_lords = {1:"Mars", 2:"Venus", 3:"Mercury", 4:"Moon", 5:"Sun", 6:"Mercury", 7:"Venus", 8:"Mars", 9:"Jupiter", 10:"Saturn", 11:"Saturn", 12:"Jupiter"}
+            sign_map = {
+                "Aries": 1, "Taurus": 2, "Gemini": 3, "Cancer": 4, 
+                "Leo": 5, "Virgo": 6, "Libra": 7, "Scorpio": 8, 
+                "Sagittarius": 9, "Capricorn": 10, "Aquarius": 11, "Pisces": 12
+            }
             
+            # Create list of (Planet, SignNum, LordOfSign)
+            p_positions = {}
+            for p_name, p in planets.items():
+                if p_name in ["Rahu", "Ketu"]: continue
+                s_num = sign_map.get(p.sign)
+                lord = sign_lords.get(s_num)
+                p_positions[p_name] = {"in_sign": s_num, "sign_lord": lord}
+                
+            # Check pairs
+            checked = set()
+            for p1, data1 in p_positions.items():
+                lord1 = data1["sign_lord"] # Lord of the sign p1 is in
+                if lord1 == p1: continue # Own sign
+                
+                # Check if Lord1 is in P1's sign
+                if lord1 in p_positions:
+                    lord1_sign_lord = p_positions[lord1]["sign_lord"]
+                    if lord1_sign_lord == p1:
+                        # Exhange detected
+                        pair = tuple(sorted((p1, lord1)))
+                        if pair not in checked:
+                            yogas["raja_yogas"].append({
+                                "name": f"Parivartana Yoga ({p1}-{lord1})",
+                                "description": f"Exchange of signs between {p1} and {lord1}. Strengthens both houses."
+                            })
+                            checked.add(pair)
+            
+            # 7. Vipreet Raja Yoga
+            # Lords of 6, 8, 12 in 6, 8, 12
+            trik_houses = [6, 8, 12]
+            # Need to know which planet rules 6, 8, 12 for this Ascendant
+            # 1. Find Ascendant Sign
+            asc_sign_num = 1 # Default Aries
+            if chart.d1_chart.houses:
+                asc_sign_str = chart.d1_chart.houses[0].sign
+                asc_sign_num = sign_map.get(asc_sign_str, 1)
+            
+            # Calculate lords of 6, 8, 12
+            lord_6 = sign_lords.get(((asc_sign_num + 5) % 12) or 12)
+            lord_8 = sign_lords.get(((asc_sign_num + 7) % 12) or 12)
+            lord_12 = sign_lords.get(((asc_sign_num + 11) % 12) or 12)
+            
+            suspects = {lord_6: "6th Lord", lord_8: "8th Lord", lord_12: "12th Lord"}
+            
+            for p_name, label in suspects.items():
+                if p_name in planets:
+                    if planets[p_name].house in trik_houses:
+                        yogas["raja_yogas"].append({
+                            "name": "Vipreet Raja Yoga",
+                            "description": f"{label} ({p_name}) is in a Trik house ({planets[p_name].house}). Success after struggle."
+                        })
+                        
+            # 8. Pancha Mahapurusha Yoga
+            # Mars, Merc, Jup, Ven, Sat in Own/Exalt AND in Kendra (1, 4, 7, 10)
+            candidates = {
+                "Mars": "Ruchaka Yoga", 
+                "Mercury": "Bhadra Yoga", 
+                "Jupiter": "Hamsa Yoga", 
+                "Venus": "Malavya Yoga", 
+                "Saturn": "Sasa Yoga"
+            }
+            exalt_signs = {"Mars": "Capricorn", "Mercury": "Virgo", "Jupiter": "Cancer", "Venus": "Pisces", "Saturn": "Libra"}
+            own_signs = {
+                "Mars": ["Aries", "Scorpio"], "Mercury": ["Gemini", "Virgo"], 
+                "Jupiter": ["Sagittarius", "Pisces"], "Venus": ["Taurus", "Libra"], 
+                "Saturn": ["Capricorn", "Aquarius"]
+            }
+            
+            for p_name, yoga_name in candidates.items():
+                if p_name in planets:
+                    p = planets[p_name]
+                    if p.house in [1, 4, 7, 10]:
+                        is_strong = False
+                        if p.sign == exalt_signs[p_name]: is_strong = True
+                        if p.sign in own_signs[p_name]: is_strong = True
+                        
+                        if is_strong:
+                             yogas["raja_yogas"].append({
+                                "name": yoga_name,
+                                "description": f"Pancha Mahapurusha: {p_name} strong in Kendra."
+                            })
+
         except Exception as e:
             print(f"Warning: Error calculating yogas: {e}")
             
