@@ -690,8 +690,6 @@ class AstroEngine:
                 
         except Exception as e:
             # print(f"Transit Error: {e}")
-        except Exception as e:
-            # print(f"Transit Error: {e}")
             import traceback
             # print(f"Transit Error Trace: {traceback.format_exc()}")
             transits["error"] = str(e)
