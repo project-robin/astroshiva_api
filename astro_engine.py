@@ -414,9 +414,11 @@ class AstroEngine:
             output['current_transits'] = self._calculate_transits(output['divisional_charts']['D1']['ascendant']['sign'], output['divisional_charts']['D1']['planets']['Moon']['sign'])
 
         except Exception as e:
-             # print(f"Warning: Enrichment failed: {e}")
-             # Don't spam logs if it fails, just skip
-             pass
+             import traceback
+             print(f"Enrichment Error: {e}")
+             trace = traceback.format_exc()
+             output['meta']['enrichment_error'] = f"{str(e)} | {trace}"
+             # pass
         
     def _calculate_jaimini_karakas(self, planets_data):
         """Calculate 7 Chara Karakas based on degrees"""
