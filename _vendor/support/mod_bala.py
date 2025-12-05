@@ -563,7 +563,7 @@ def compute_VarshaMaasaDinaHoraBala(birthdata):
     lagna2sun_dist = gen.get_point2planetdistance(data.charts["D1"],lagnaPoint,"Sun")
     sun2lagna_dist = (360*3600) - lagna2sun_dist
 
-    hora_num = sun2lagna_dist // (15*3600)
+    hora_num = int(sun2lagna_dist // (15*3600))
     if((sun2lagna_dist % (15*3600))>0):
         hora_num = hora_num + 1
     horalords = [   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
@@ -573,7 +573,7 @@ def compute_VarshaMaasaDinaHoraBala(birthdata):
                     "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
                 ]
     dinaidx = horalords.index(bornvaara)
-    horalord = daylord[horalords[dinaidx+hora_num]]
+    horalord = daylord[horalords[int(dinaidx+hora_num)]]
     data.charts["Balas"]["Shadbala"]["Kaalabala"]["Varsha-maasa-dina-horabala"][horalord] = 60.0 + data.charts["Balas"]["Shadbala"]["Kaalabala"]["Varsha-maasa-dina-horabala"][horalord]
 
     return
