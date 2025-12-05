@@ -227,9 +227,9 @@ def update_planetaryData(jd, place):
 
 
 def compute_lagnaChart_custom(UserBirthData):
-  birthday_julien = swe.julday( UserBirthData["DOB"]["year"],  #birth year
-                                UserBirthData["DOB"]["month"],  #birth month
-                                UserBirthData["DOB"]["day"],  #birth day
+  birthday_julien = swe.julday( int(UserBirthData["DOB"]["year"]),  #birth year
+                                int(UserBirthData["DOB"]["month"]),  #birth month
+                                int(UserBirthData["DOB"]["day"]),  #birth day
                                 ((UserBirthData["TOB"]["hour"])+ (UserBirthData["TOB"]["min"])/60. + (UserBirthData["TOB"]["sec"])/3600),  #birth time in float
                               )   #yyyy,mm,dd,time_24hr_format(hh + mm/60 + ss/3600)
 

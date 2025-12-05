@@ -132,14 +132,14 @@ def inverse_lagrange(x, y, ya):
   return total
 
 # Julian Day number as on (year, month, day) at 00:00 UTC
-gregorian_to_jd = lambda date: swe.julday(date.year, date.month, date.day, 0.0)
+gregorian_to_jd = lambda date: swe.julday(int(date.year), int(date.month), int(date.day), 0.0)
 jd_to_gregorian = lambda jd: swe.revjul(jd, swe.GREG_CAL)   # returns (y, m, d, h, min, s)
 
 def local_time_to_jdut1(year, month, day, hour = 0, minutes = 0, seconds = 0, timezone = 0.0):
   """Converts local time to JD(UT1)"""
-  y, m, d, h, mnt, s = swe.utc_time_zone(year, month, day, hour, minutes, seconds, timezone)
+  y, m, d, h, mnt, s = swe.utc_time_zone(int(year), int(month), int(day), int(hour), int(minutes), int(seconds), timezone)
   # BUG in pyswisseph: replace 0 by s
-  jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, 0, swe.GREG_CAL)
+  jd_et, jd_ut1 = swe.utc_to_jd(int(y), int(m), int(d), int(h), int(mnt), 0, swe.GREG_CAL)
   return jd_ut1
 
 def nakshatra_pada(longitude):
