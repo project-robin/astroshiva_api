@@ -149,6 +149,9 @@ class AstroEngine:
             return output
             
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"DETAILED ERROR in generate_full_chart:\n{error_details}")
             raise ValueError(f"Error generating chart: {str(e)}")
     
     def _extract_divisional_charts(self, astrological_data: Dict) -> Dict[str, Any]:
