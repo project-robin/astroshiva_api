@@ -223,6 +223,50 @@ async def test_chart():
         )
 
 
+@app.get("/api/debug-swe", tags=["Debugging"])
+async def debug_swe():
+    """Debug Swisseph availability and error reporting"""
+    debug_info = {
+        "swisseph_import": False,
+        "error": None,
+        "ephe_path": None,
+        "test_calc": None
+    }
+    try:
+        import swisseph as swe
+        debug_info["swisseph_import"] = True
+        
+        # Test Calculation
+        # Date: 2000-01-01
+        jd = swe.julday(2000, 1, 1, 12.0)
+        
+        # Try calculation with SWIEPH flag
+        try:
+            res = swe.calc_ut(jd, swe.SUN, swe.FLG_SWIEPH | swe.FLG_SPEED)
+            debug_info["test_calc"] = f"Success (SWIEPH): {res}"
+        except Exception as e1:
+            debug_info["test_calc_error_swieph"] = str(e1)
+            # Try fallback
+            try:
+                res = swe.calc_ut(jd, swe.SUN, swe.FLG_SPEED)
+                debug_info["test_calc"] = f"Success (Default/Moshier): {res}"
+            except Exception as e2:
+                debug_info["test_calc_error_default"] = str(e2)
+
+        # Check path
+        try:
+            # path = swe.get_ephe_path() # some versions dont have this
+            pass 
+        except:
+            pass
+            
+    except ImportError:
+        debug_info["error"] = "Module 'swisseph' not found"
+    except Exception as e:
+        debug_info["error"] = f"Unexpected error: {str(e)}\n{traceback.format_exc()}"
+        
+    return debug_info
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():
