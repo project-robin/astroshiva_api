@@ -139,7 +139,7 @@ def local_time_to_jdut1(year, month, day, hour = 0, minutes = 0, seconds = 0, ti
   """Converts local time to JD(UT1)"""
   y, m, d, h, mnt, s = swe.utc_time_zone(year, month, day, hour, minutes, seconds, timezone)
   # BUG in pyswisseph: replace 0 by s
-  jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, 0, flags = swe.GREG_CAL)
+  jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, 0, swe.GREG_CAL)
   return jd_ut1
 
 def nakshatra_pada(longitude):
