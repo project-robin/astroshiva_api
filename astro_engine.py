@@ -1,25 +1,17 @@
 """
 Vedic Astrology Engine - Local Free Implementation
-Uses jyotishyamitra for 100% free, local, offline calculations
+Uses jyotishganit for 100% free, local, offline calculations
 """
 
-import sys
-from pathlib import Path
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-# Add _vendor directory to path for vendored jyotishyamitra
-vendor_path = Path(__file__).parent / "_vendor"
-sys.path.insert(0, str(vendor_path))
-
-import jyotishyamitra as jm
-
-
+from jyotishganit import calculate_birth_chart, get_birth_chart_json
 
 
 class AstroEngine:
-    """Main engine for Vedic Astrology calculations using jyotishyamitra"""
+    """Main engine for Vedic Astrology calculations using jyotishganit"""
     
     def __init__(self):
         """Initialize the astrology engine"""
@@ -60,87 +52,49 @@ class AstroEngine:
                     "Place name alone cannot provide precise astronomical positions."
                 )
             
-            # Parse date components
+            # Parse date and time components
             year, month, day = dob.split('-')
             hour, minute, second = (tob.split(':') + ['0', '0'])[:3]
             
-            # Calculate timezone offset if not provided
-            # Rough approximation: 15 degrees longitude = 1 hour offset from GMT
-            if timezone is None:
-                # Calculate from longitude (rough approximation)
-                tz_hours = longitude / 15.0
-                # Round to nearest 0.5 hour
-                tz_rounded = round(tz_hours * 2) / 2
-                timezone = f"{tz_rounded:+.1f}" if tz_rounded >= 0 else f"{tz_rounded:.1f}"
-            
-            # Ensure timezone is in correct string format (e.g., "+5.5" or "-4.0")
-            if not isinstance(timezone, str):
-                timezone = str(timezone)
-            
-            # Format timezone with explicit sign as per docs (e.g., "+5.5" or "-4.0")
-            tz_float = float(timezone)
-            if tz_float >= 0:
-                timezone_str = f"+{tz_float}"
-            else:
-                timezone_str = str(tz_float)
-            
-            # Format lat/lon with explicit sign as per docs
-            lat_str = f"+{latitude}" if latitude >= 0 else str(latitude)
-            lon_str = f"+{longitude}" if longitude >= 0 else str(longitude)
-            
-            # Step 1: Clear any previous birth data (REQUIRED per official docs)
-            jm.clear_birthdata()
-            
-            # Step 2: Input birth data - all parameters must be strings
-            jm.input_birthdata(
-                name=str(name),
-                place=str(place),  # Place of birth (for reference only)
-                gender="male",  # Default gender, can be parameterized later
-                year=str(year),
-                month=str(int(month)),
-                day=str(int(day)),
-                hour=str(int(hour)),
-                min=str(int(minute)),  # NOTE: parameter is 'min' not 'minute'
-                sec=str(int(second)),
-                lattitude=lat_str,  # NOTE: double 't', format with sign like "+14.2798"
-                longitude=lon_str,  # Format with sign like "+74.4439"
-                timezone=timezone_str  # Must be string like "+5.5" or "-4.0"
+            # Create datetime object for birth time
+            birth_datetime = datetime(
+                int(year), int(month), int(day),
+                int(hour), int(minute), int(second)
             )
             
-            # Step 3: Validate the birth data
-            validation_result = jm.validate_birthdata()
-            if validation_result != "SUCCESS":
-                raise ValueError(f"Birth data validation failed: {validation_result}")
+            # Calculate timezone offset if not provided
+            if timezone is None:
+                # Rough approximation: 15 degrees longitude = 1 hour offset from GMT
+                tz_offset = longitude / 15.0
+                # Round to nearest 0.5 hour
+                tz_offset = round(tz_offset * 2) / 2
+            else:
+                # Convert string timezone to float
+                tz_offset = float(timezone)
             
-            # Step 3: Get the validated birth data dictionary
-            birth_data = jm.get_birthdata()
+            # Store birth data for reference
+            self.birth_data = {
+                'name': name,
+                'place': place,
+                'dob': dob,
+                'tob': tob,
+                'latitude': latitude,
+                'longitude': longitude,
+                'timezone_offset': tz_offset
+            }
             
-            # Step 4: Set output path for the library (required!)
-            import tempfile
-            import os
-            import uuid
-            
-            output_dir = tempfile.gettempdir()  # /tmp for serverless
-            output_filename = f"astro_{uuid.uuid4().hex[:8]}"
-            jm.set_output(output_dir, output_filename)
-            
-            # Step 5: Generate full astrological data
-            jm.generate_astrologicalData(birth_data)
-            
-            # Step 6: Read the generated JSON file
-            output_file = os.path.join(output_dir, f"{output_filename}.json")
-            with open(output_file, 'r') as f:
-                astrological_data = json.load(f)
-            
-            # Clean up temp file
-            try:
-                os.remove(output_file)
-            except:
-                pass
+            # Generate chart using jyotishganit (single function call!)
+            chart = calculate_birth_chart(
+                birth_date=birth_datetime,
+                latitude=latitude,
+                longitude=longitude,
+                timezone_offset=tz_offset,
+                location_name=place,
+                name=name
+            )
             
             # Store for reference
-            self.birth_data = birth_data
-            self.current_chart = astrological_data
+            self.current_chart = chart
             
             # Extract and format output
             output = {
@@ -151,13 +105,14 @@ class AstroEngine:
                     "pob": place,
                     "latitude": latitude,
                     "longitude": longitude,
+                    "timezone_offset": tz_offset,
                     "generated_at": datetime.now().isoformat()
                 },
-                "divisional_charts": self._extract_divisional_charts(astrological_data),
-                "balas": self._extract_balas(astrological_data),
-                "dashas": self._extract_dashas(astrological_data),
-                "nakshatras": self._extract_nakshatras(astrological_data),
-                "panchang": self._extract_panchang(astrological_data)
+                "divisional_charts": self._extract_divisional_charts(chart),
+                "balas": self._extract_balas(chart),
+                "dashas": self._extract_dashas(chart),
+                "nakshatras": self._extract_nakshatras(chart),
+                "panchang": self._extract_panchang(chart)
             }
             
             return output
@@ -168,99 +123,67 @@ class AstroEngine:
             print(f"DETAILED ERROR in generate_full_chart:\n{error_details}")
             raise ValueError(f"Error generating chart: {str(e)}")
     
-    def _extract_divisional_charts(self, astrological_data: Dict) -> Dict[str, Any]:
-        """Extract all 16 divisional charts (D1-D60)"""
+    def _extract_divisional_charts(self, chart) -> Dict[str, Any]:
+        """Extract all divisional charts (D1-D60)"""
         charts = {}
         
         try:
             # D1 (Rashi chart) is main
-            if hasattr(astrological_data, 'D1'):
-                charts['D1'] = self._format_chart_data(astrological_data.D1)
+            charts['D1'] = self._format_chart_data(chart.d1_chart)
             
             # D2-D60 divisional charts
-            for i in range(2, 61):
-                chart_attr = f'D{i}'
-                if hasattr(astrological_data, chart_attr):
-                    charts[chart_attr] = self._format_chart_data(getattr(astrological_data, chart_attr))
+            for chart_name, divisional_chart in chart.divisional_charts.items():
+                charts[chart_name.upper()] = self._format_chart_data(divisional_chart)
         except Exception as e:
             print(f"Warning: Could not extract all divisional charts: {e}")
         
         return charts
     
-    def _format_chart_data(self, chart) -> Dict[str, Any]:
+    def _format_chart_data(self, chart_obj) -> Dict[str, Any]:
         """Format individual chart data"""
         try:
-            return {
-                "ascendant": self._get_sign_info(chart.ascendant) if hasattr(chart, 'ascendant') else None,
-                "planets": self._extract_planets(chart),
-                "houses": self._extract_houses(chart),
-                "aspects": self._extract_aspects(chart) if hasattr(chart, 'aspects') else {}
+            # Extract ascendant (first house)
+            ascendant_sign = None
+            ascendant_lord = None
+            if chart_obj.houses and len(chart_obj.houses) > 0:
+                ascendant_sign = chart_obj.houses[0].sign
+                ascendant_lord = getattr(chart_obj.houses[0], 'lord', None)
+            
+            formatted = {
+                "ascendant": {
+                    "sign": ascendant_sign,
+                    "lord": ascendant_lord
+                },
+                "planets": {},
+                "houses": []
             }
+            
+            # Extract planet positions
+            for planet in chart_obj.planets:
+                formatted["planets"][planet.celestial_body] = {
+                    "sign": planet.sign,
+                    "degree": planet.sign_degrees,
+                    "nakshatra": planet.nakshatra,
+                    "pada": planet.pada,
+                    "house": planet.house,
+                    "retrograde": getattr(planet, 'retrograde', False)
+                }
+            
+            # Extract houses
+            for i, house in enumerate(chart_obj.houses, 1):
+                house_data = {
+                    "house": i,
+                    "sign": house.sign,
+                    "lord": getattr(house, 'lord', None),
+                    "occupants": [p.celestial_body for p in house.occupants]
+                }
+                formatted["houses"].append(house_data)
+            
+            return formatted
         except Exception as e:
             return {"error": f"Could not format chart: {e}"}
     
-    def _extract_planets(self, chart) -> Dict[str, Any]:
-        """Extract planet positions from chart"""
-        planets = {}
-        
-        try:
-            if hasattr(chart, 'planets'):
-                for planet in chart.planets:
-                    planet_name = getattr(planet, 'name', 'Unknown')
-                    planets[planet_name] = {
-                        "sign": getattr(planet, 'sign', None),
-                        "degree": getattr(planet, 'degree', None),
-                        "nakshatra": getattr(planet, 'nakshatra', None),
-                        "nakshatra_pada": getattr(planet, 'nakshatra_pada', None),
-                        "speed": getattr(planet, 'speed', None),
-                        "retrograde": getattr(planet, 'retrograde', False)
-                    }
-        except Exception as e:
-            print(f"Warning: Could not extract planets: {e}")
-        
-        return planets
-    
-    def _extract_houses(self, chart) -> List[Dict[str, Any]]:
-        """Extract house data from chart"""
-        houses = []
-        
-        try:
-            if hasattr(chart, 'houses'):
-                for i, house in enumerate(chart.houses, 1):
-                    houses.append({
-                        "house": i,
-                        "sign": getattr(house, 'sign', None),
-                        "degree": getattr(house, 'degree', None)
-                    })
-        except Exception as e:
-            print(f"Warning: Could not extract houses: {e}")
-        
-        return houses
-    
-    def _extract_aspects(self, chart) -> Dict[str, Any]:
-        """Extract planetary aspects"""
-        aspects = {}
-        
-        try:
-            if hasattr(chart, 'aspects'):
-                aspects = chart.aspects
-        except Exception as e:
-            print(f"Warning: Could not extract aspects: {e}")
-        
-        return aspects
-    
-    def _get_sign_info(self, ascendant) -> Dict[str, Any]:
-        """Get ascendant sign information"""
-        try:
-            return {
-                "sign": getattr(ascendant, 'sign', None),
-                "degree": getattr(ascendant, 'degree', None),
-                "nakshatra": getattr(ascendant, 'nakshatra', None)
-            }
-        except:
-            return {}
-    
-    def _extract_balas(self, astrological_data: Dict) -> Dict[str, Any]:
+    def _extract_balas(self, chart) -> Dict[str, Any]:
         """Extract Shadbala and Ashtakavarga"""
         balas = {
             "shadbala": {},
@@ -268,103 +191,94 @@ class AstroEngine:
         }
         
         try:
-            if hasattr(astrological_data, 'shadbala'):
-                balas['shadbala'] = astrological_data.shadbala
+            # Extract Shadbala for each planet
+            for planet in chart.d1_chart.planets:
+                if hasattr(planet, 'shadbala') and planet.shadbala:
+                    balas['shadbala'][planet.celestial_body] = planet.shadbala
             
-            if hasattr(astrological_data, 'ashtakavarga'):
-                balas['ashtakavarga'] = astrological_data.ashtakavarga
+            # Extract Ashtakavarga
+            if hasattr(chart, 'ashtakavarga') and chart.ashtakavarga:
+                balas['ashtakavarga'] = {
+                    'sav': chart.ashtakavarga.sav,  # Sarvashtakavarga
+                    'bhav': chart.ashtakavarga.bhav  # Bhinnashtakavarga
+                }
         except Exception as e:
             print(f"Warning: Could not extract balas: {e}")
         
         return balas
     
-    def _extract_dashas(self, astrological_data: Dict) -> Dict[str, Any]:
+    def _extract_dashas(self, chart) -> Dict[str, Any]:
         """Extract Vimshottari Dasha and other dashas"""
         dashas = {
             "vimshottari": {
                 "mahadasha": [],
-                "antardasha": [],
-                "pratyantardasha": [],
                 "current_dasha": None
-            },
-            "other_dashas": {}
+            }
         }
         
         try:
-            if hasattr(astrological_data, 'vimshottari'):
-                vd = astrological_data.vimshottari
-                
-                # Mahadasha
-                if hasattr(vd, 'mahadasha'):
-                    dashas['vimshottari']['mahadasha'] = self._format_dasha_list(vd.mahadasha)
-                
-                # Antardasha
-                if hasattr(vd, 'antardasha'):
-                    dashas['vimshottari']['antardasha'] = self._format_dasha_list(vd.antardasha)
-                
-                # Pratyantardasha
-                if hasattr(vd, 'pratyantardasha'):
-                    dashas['vimshottari']['pratyantardasha'] = self._format_dasha_list(vd.pratyantardasha)
-                
+            if hasattr(chart, 'dashas') and chart.dashas:
                 # Current dasha
-                if hasattr(vd, 'current'):
-                    dashas['vimshottari']['current_dasha'] = vd.current
+                if hasattr(chart.dashas, 'current'):
+                    dashas['vimshottari']['current_dasha'] = chart.dashas.current
+                
+                # Upcoming mahadashas - it's a dictionary
+                if hasattr(chart.dashas, 'upcoming'):
+                    upcoming = chart.dashas.upcoming
+                    # Check if it's a dictionary or object with mahadashas attribute
+                    if isinstance(upcoming, dict) and 'mahadashas' in upcoming:
+                        for lord, period in upcoming['mahadashas'].items():
+                            dashas['vimshottari']['mahadasha'].append({
+                                "lord": lord,
+                                "start_date": str(period.get('start', '')),
+                                "end_date": str(period.get('end', ''))
+                            })
+                    elif hasattr(upcoming, 'mahadashas'):
+                        for lord, period in upcoming.mahadashas.items():
+                            dashas['vimshottari']['mahadasha'].append({
+                                "lord": lord,
+                                "start_date": str(period.get('start', '')),
+                                "end_date": str(period.get('end', ''))
+                            })
         except Exception as e:
             print(f"Warning: Could not extract dashas: {e}")
         
         return dashas
     
-    def _format_dasha_list(self, dasha_list) -> List[Dict[str, Any]]:
-        """Format dasha period list"""
-        formatted = []
-        
-        try:
-            for dasha in dasha_list:
-                formatted.append({
-                    "lord": getattr(dasha, 'lord', None),
-                    "start_date": str(getattr(dasha, 'start_date', None)),
-                    "end_date": str(getattr(dasha, 'end_date', None)),
-                    "duration_years": getattr(dasha, 'duration', None)
-                })
-        except Exception as e:
-            print(f"Warning: Could not format dasha list: {e}")
-        
-        return formatted
-    
-    def _extract_nakshatras(self, astrological_data: Dict) -> Dict[str, Any]:
-        """Extract Nakshatra data"""
+    def _extract_nakshatras(self, chart) -> Dict[str, Any]:
+        """Extract Nakshatra data for all planets"""
         nakshatras = {}
         
         try:
-            if hasattr(astrological_data, 'nakshatras'):
-                for i, nak in enumerate(astrological_data.nakshatras):
-                    nakshatras[f'nakshatra_{i}'] = {
-                        "name": getattr(nak, 'name', None),
-                        "lord": getattr(nak, 'lord', None),
-                        "pada": getattr(nak, 'pada', None)
-                    }
+            for planet in chart.d1_chart.planets:
+                nakshatras[planet.celestial_body] = {
+                    "nakshatra": planet.nakshatra,
+                    "pada": planet.pada
+                }
         except Exception as e:
             print(f"Warning: Could not extract nakshatras: {e}")
         
         return nakshatras
     
-    def _extract_panchang(self, astrological_data: Dict) -> Dict[str, Any]:
+    def _extract_panchang(self, chart) -> Dict[str, Any]:
         """Extract Panchang data (Tithi, Vara, Yoga, Karana)"""
         panchang = {
             "tithi": None,
             "vara": None,
             "yoga": None,
-            "karana": None
+            "karana": None,
+            "nakshatra": None
         }
         
         try:
-            if hasattr(astrological_data, 'panchang'):
-                p = astrological_data.panchang
+            if hasattr(chart, 'panchanga') and chart.panchanga:
+                p = chart.panchanga
                 panchang = {
-                    "tithi": getattr(p, 'tithi', None),
-                    "vara": getattr(p, 'vara', None),
-                    "yoga": getattr(p, 'yoga', None),
-                    "karana": getattr(p, 'karana', None)
+                    "tithi": p.tithi,
+                    "vara": p.vaara,
+                    "yoga": p.yoga,
+                    "karana": p.karana,
+                    "nakshatra": p.nakshatra
                 }
         except Exception as e:
             print(f"Warning: Could not extract panchang: {e}")
@@ -379,17 +293,23 @@ class AstroEngine:
         dashas = []
         
         try:
-            if hasattr(self.current_chart, 'vimshottari'):
-                vd = self.current_chart.vimshottari
-                
-                if hasattr(vd, 'mahadasha'):
-                    for i, dasha in enumerate(vd.mahadasha[:count]):
+            if hasattr(self.current_chart, 'dashas') and self.current_chart.dashas:
+                upcoming = getattr(self.current_chart.dashas, 'upcoming', None)
+                if upcoming:
+                    # Handle dictionary structure
+                    if isinstance(upcoming, dict):
+                        md_dict = upcoming.get('mahadashas', {})
+                    else:
+                        md_dict = getattr(upcoming, 'mahadashas', {})
+                    
+                    for i, (lord, period) in enumerate(md_dict.items()):
+                        if i >= count:
+                            break
                         dashas.append({
                             "type": "Mahadasha",
-                            "lord": getattr(dasha, 'lord', None),
-                            "start": str(getattr(dasha, 'start_date', None)),
-                            "end": str(getattr(dasha, 'end_date', None)),
-                            "duration_years": getattr(dasha, 'duration', None)
+                            "lord": lord,
+                            "start": str(period.get('start', '')),
+                            "end": str(period.get('end', ''))
                         })
         except Exception as e:
             print(f"Warning: Could not get dasha periods: {e}")
@@ -402,9 +322,15 @@ class AstroEngine:
             raise ValueError("No chart generated. Call generate_full_chart() first.")
         
         try:
-            chart_attr = chart_type.upper()
-            if hasattr(self.current_chart, chart_attr):
-                return self._format_chart_data(getattr(self.current_chart, chart_attr))
+            chart_key = chart_type.lower()
+            
+            # Check if it's the main chart
+            if chart_key == 'd1':
+                return self._format_chart_data(self.current_chart.d1_chart)
+            
+            # Check divisional charts
+            if chart_key in self.current_chart.divisional_charts:
+                return self._format_chart_data(self.current_chart.divisional_charts[chart_key])
             else:
                 raise ValueError(f"Chart {chart_type} not available")
         except Exception as e:
@@ -416,10 +342,12 @@ class AstroEngine:
             raise ValueError("No chart generated. Call generate_full_chart() first.")
         
         try:
-            # Create a clean dict structure for AI consumption
+            # Use jyotishganit's built-in JSON export
+            chart_dict = get_birth_chart_json(self.current_chart)
+            
             output = {
                 "status": "success",
-                "data": self.current_chart
+                "data": chart_dict
             }
             return json.dumps(output, indent=2, default=str)
         except Exception as e:
@@ -432,26 +360,30 @@ class AstroEngine:
 
 def test_engine():
     """Test the astrology engine with sample data"""
-    print("Testing AstroEngine with jyotishyamitra...")
+    print("Testing AstroEngine with jyotishganit...")
     
     try:
         engine = AstroEngine()
         
-        # Sample birth data (adjust as needed)
+        # Sample birth data (July 4, 1996, 9:10 AM, Karmala, India)
         chart = engine.generate_full_chart(
             name="Test Person",
-            dob="1990-01-15",
-            tob="12:30:00",
-            place="New York",
-            latitude=40.7128,
-            longitude=-74.0060
+            dob="1996-07-04",
+            tob="09:10:00",
+            place="Karmala, India",
+            latitude=18.404,
+            longitude=75.195,
+            timezone="+5.5"
         )
         
         print("✅ Chart generation successful!")
         print(f"Generated chart with {len(chart.get('divisional_charts', {}))} divisional charts")
+        print(f"Ascendant: {chart['divisional_charts']['D1']['ascendant']['sign']}")
+        print(f"Moon Sign: {chart['divisional_charts']['D1']['planets']['Moon']['sign']}")
+        print(f"Nakshatra: {chart['panchang']['nakshatra']}")
         
         # Get dashas
-        dashas = engine.get_dasha_periods(5)
+        dashas = engine.get_dasha_periods(3)
         print(f"✅ Retrieved {len(dashas)} dasha periods")
         
         # Export for AI
@@ -462,7 +394,9 @@ def test_engine():
         return True
         
     except Exception as e:
+        import traceback
         print(f"❌ Test failed: {e}")
+        print(traceback.format_exc())
         return False
 
 
