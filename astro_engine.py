@@ -377,7 +377,16 @@ class AstroEngine:
                     # res is (long, lat, dist, speed_long, speed_lat, speed_dist)
                     
                     deg_total = res[0]
-                    speed = res[3] if len(res) > 3 else 0.0
+                    deg_total = res[0]
+                    # swe.calc_ut returns ((long, lat, dist, speed...), flags) in some bindings?
+                    # Or res is (long, lat, dist, speed...). 
+                    # If error was "tuple % int", then res[0] is a tuple.
+                    # This implies res is ((long, ...), flags).
+                    if isinstance(deg_total, tuple) or isinstance(deg_total, list):
+                        deg_total = deg_total[0]
+                        speed = res[0][3] if len(res[0]) > 3 else 0.0
+                    else:
+                        speed = res[3] if len(res) > 3 else 0.0
                     
                     # Normalize degree
                     deg_norm = deg_total % 30
@@ -652,7 +661,14 @@ class AstroEngine:
             
             for p_name, p_id in planets.items():
                 res = swe.calc_ut(jd_now, p_id, swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
-                deg_total = res[0]
+                
+                # Compatibility fix
+                data_tuple = res
+                if isinstance(res[0], (list, tuple)):
+                    data_tuple = res[0]
+                
+                deg_total = data_tuple[0]
+                speed = data_tuple[3] if len(data_tuple) > 3 else 0.0
                 sign_num = int(deg_total / 30) + 1
                 deg_rem = deg_total % 30
                 
@@ -667,11 +683,18 @@ class AstroEngine:
                     "current_sign": sign_name,
                     "current_degree": deg_rem,
                     "house_from_birth_moon": house_from_moon,
-                    "is_retrograde": res[3] < 0 if len(res)>3 else False
+                    "current_degree": deg_rem,
+                    "house_from_birth_moon": house_from_moon,
+                    "is_retrograde": speed < 0
                 }
                 
         except Exception as e:
             # print(f"Transit Error: {e}")
+        except Exception as e:
+            # print(f"Transit Error: {e}")
+            import traceback
+            # print(f"Transit Error Trace: {traceback.format_exc()}")
+            transits["error"] = str(e)
             pass
             
         return transits
