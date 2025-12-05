@@ -167,7 +167,7 @@ lunar_longitude = lambda jd: sidereal_longitude(jd, swe.MOON)
 def sunrise(jd, place):
   """Sunrise when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)
+  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))
   rise = result[1][0]  # julian-day number
   # Convert to local time
   return [rise + tz/24., to_dms((rise - jd) * 24 + tz)]
@@ -175,7 +175,7 @@ def sunrise(jd, place):
 def sunset(jd, place):
   """Sunset when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)
+  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_SET))
   setting = result[1][0]  # julian-day number
   # Convert to local time
   return [setting + tz/24., to_dms((setting - jd) * 24 + tz)]
@@ -183,7 +183,7 @@ def sunset(jd, place):
 def moonrise(jd, place):
   """Moonrise when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)
+  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))
   rise = result[1][0]  # julian-day number
   # Convert to local time
   return to_dms((rise - jd) * 24 + tz)
@@ -191,7 +191,7 @@ def moonrise(jd, place):
 def moonset(jd, place):
   """Moonset when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi = _rise_flags + swe.CALC_SET)
+  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi = int(_rise_flags + swe.CALC_SET))
   setting = result[1][0]  # julian-day number
   # Convert to local time
   return to_dms((setting - jd) * 24 + tz)
@@ -418,8 +418,8 @@ def day_duration(jd, place):
 def gauri_chogadiya(jd, place):
   lat, lon, tz = place
   tz = place.timezone
-  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
-  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))[1][0]
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_SET))[1][0]
   day_dur = (sset - srise)
 
   end_times = []
@@ -427,7 +427,7 @@ def gauri_chogadiya(jd, place):
     end_times.append(to_dms((srise + (i * day_dur) / 8 - jd) * 24 + tz))
 
   # Night duration = time from today's sunset to tomorrow's sunrise
-  srise = swe.rise_trans((jd + 1) - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  srise = swe.rise_trans((jd + 1) - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))[1][0]
   night_dur = (srise - sset)
   for i in range(1, 9):
     end_times.append(to_dms((sset + (i * night_dur) / 8 - jd) * 24 + tz))
@@ -437,8 +437,8 @@ def gauri_chogadiya(jd, place):
 def trikalam(jd, place, option='rahu'):
   lat, lon, tz = place
   tz = place.timezone
-  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
-  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))[1][0]
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_SET))[1][0]
   day_dur = (sset - srise)
   weekday = vaara(jd)
 
@@ -464,12 +464,12 @@ def durmuhurtam(jd, place):
   tz = place.timezone
 
   # Night = today's sunset to tomorrow's sunrise
-  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
-  srise = swe.rise_trans((jd + 1) - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_SET))[1][0]
+  srise = swe.rise_trans((jd + 1) - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))[1][0]
   night_dur = (srise - sset)
 
   # Day = today's sunrise to today's sunset
-  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))[1][0]
   day_dur = (sset - srise)
 
   weekday = vaara(jd)
@@ -508,8 +508,8 @@ def abhijit_muhurta(jd, place):
   during the day_duration (~12 hours)"""
   lat, lon, tz = place
   tz = place.timezone
-  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
-  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_RISE))[1][0]
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = int(_rise_flags + swe.CALC_SET))[1][0]
   day_dur = (sset - srise)
 
   start_time = srise + 7 / 15 * day_dur
