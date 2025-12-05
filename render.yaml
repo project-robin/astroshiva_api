@@ -1,0 +1,15 @@
+services:
+  # FastAPI Backend Service
+  - type: web
+    name: astro-shiva-api
+    env: python
+    region: oregon  # Change to your preferred region
+    plan: free
+    branch: main  # Change if using different branch
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT --workers 2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+    healthCheckPath: /health
+    autoDeploy: true
