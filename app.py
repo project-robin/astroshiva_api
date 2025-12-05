@@ -226,42 +226,37 @@ async def test_chart():
 @app.get("/api/debug-swe", tags=["Debugging"])
 async def debug_swe():
     """Debug Swisseph availability and error reporting"""
+    import sys
+    import subprocess
+    
     debug_info = {
         "swisseph_import": False,
         "error": None,
-        "ephe_path": None,
-        "test_calc": None
+        "sys_path": sys.path,
+        "pip_list": []
     }
+    
+    # Check installed packages
+    try:
+        # Run pip list
+        result = subprocess.run([sys.executable, "-m", "pip", "list"], capture_output=True, text=True)
+        debug_info["pip_list"] = result.stdout.splitlines()
+    except Exception as e:
+        debug_info["pip_list_error"] = str(e)
+
     try:
         import swisseph as swe
         debug_info["swisseph_import"] = True
+        debug_info["swe_file"] = swe.__file__
         
         # Test Calculation
-        # Date: 2000-01-01
         jd = swe.julday(2000, 1, 1, 12.0)
-        
-        # Try calculation with SWIEPH flag
-        try:
-            res = swe.calc_ut(jd, swe.SUN, swe.FLG_SWIEPH | swe.FLG_SPEED)
-            debug_info["test_calc"] = f"Success (SWIEPH): {res}"
-        except Exception as e1:
-            debug_info["test_calc_error_swieph"] = str(e1)
-            # Try fallback
-            try:
-                res = swe.calc_ut(jd, swe.SUN, swe.FLG_SPEED)
-                debug_info["test_calc"] = f"Success (Default/Moshier): {res}"
-            except Exception as e2:
-                debug_info["test_calc_error_default"] = str(e2)
+        res = swe.calc_ut(jd, swe.SUN, swe.FLG_SWIEPH | swe.FLG_SPEED)
+        debug_info["test_calc"] = f"Success (SWIEPH): {res}"
 
-        # Check path
-        try:
-            # path = swe.get_ephe_path() # some versions dont have this
-            pass 
-        except:
-            pass
-            
-    except ImportError:
-        debug_info["error"] = "Module 'swisseph' not found"
+    except ImportError as e:
+        debug_info["error"] = f"ImportError: {e}"
+        # Try finding it manually?
     except Exception as e:
         debug_info["error"] = f"Unexpected error: {str(e)}\n{traceback.format_exc()}"
         
