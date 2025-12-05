@@ -77,7 +77,21 @@ class AstroEngine:
             if not isinstance(timezone, str):
                 timezone = str(timezone)
             
-            # Step 1: Input birth data - all parameters must be strings
+            # Format timezone with explicit sign as per docs (e.g., "+5.5" or "-4.0")
+            tz_float = float(timezone)
+            if tz_float >= 0:
+                timezone_str = f"+{tz_float}"
+            else:
+                timezone_str = str(tz_float)
+            
+            # Format lat/lon with explicit sign as per docs
+            lat_str = f"+{latitude}" if latitude >= 0 else str(latitude)
+            lon_str = f"+{longitude}" if longitude >= 0 else str(longitude)
+            
+            # Step 1: Clear any previous birth data (REQUIRED per official docs)
+            jm.clear_birthdata()
+            
+            # Step 2: Input birth data - all parameters must be strings
             jm.input_birthdata(
                 name=str(name),
                 place=str(place),  # Place of birth (for reference only)
@@ -88,12 +102,12 @@ class AstroEngine:
                 hour=str(int(hour)),
                 min=str(int(minute)),  # NOTE: parameter is 'min' not 'minute'
                 sec=str(int(second)),
-                lattitude=str(latitude),  # NOTE: double 't', REQUIRED
-                longitude=str(longitude),  # REQUIRED
-                timezone=timezone  # Must be string like "+5.5" or "-4.0"
+                lattitude=lat_str,  # NOTE: double 't', format with sign like "+14.2798"
+                longitude=lon_str,  # Format with sign like "+74.4439"
+                timezone=timezone_str  # Must be string like "+5.5" or "-4.0"
             )
             
-            # Step 2: Validate the birth data
+            # Step 3: Validate the birth data
             validation_result = jm.validate_birthdata()
             if validation_result != "SUCCESS":
                 raise ValueError(f"Birth data validation failed: {validation_result}")
