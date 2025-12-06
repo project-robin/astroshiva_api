@@ -173,6 +173,41 @@ class AstroEngine:
             raise ValueError(f"Error generating chart: {str(e)}")
     
     
+    def _extract_divisional_charts(self, chart, charts_filter=None) -> Dict[str, Any]:
+        """Extract divisional charts (D1-D60), optionally filtered"""
+        charts_out = {}
+        
+        # Default to all if None
+        # If specific list provided, always include D1
+        target_charts = [c.upper() for c in charts_filter] if charts_filter else None
+        
+        try:
+            # Create a map of D1 degrees for calculating Varga degrees
+            d1_degrees = {}
+            if hasattr(chart.d1_chart, 'planets'):
+                for p in chart.d1_chart.planets:
+                    # Ensure we have a float for degree
+                    deg = 0.0
+                    if hasattr(p, 'sign_degrees'):
+                        deg = float(p.sign_degrees)
+                    d1_degrees[p.celestial_body] = deg
+
+            # D1 (Rashi chart) is main
+            if not target_charts or 'D1' in target_charts:
+                charts_out['D1'] = self._format_chart_data(chart.d1_chart, 'D1', d1_degrees)
+            
+            # D2-D60 divisional charts
+            for chart_name, divisional_chart in chart.divisional_charts.items():
+                c_name_upper = chart_name.upper()
+                if target_charts and c_name_upper not in target_charts:
+                    continue
+                charts_out[c_name_upper] = self._format_chart_data(divisional_chart, c_name_upper, d1_degrees)
+        except Exception as e:
+            print(f"Warning: Could not extract all divisional charts: {e}")
+        
+        return charts_out
+    
+    def _calculate_varga_degree(self, d1_degree: float, harmonic: int) -> float:
         """Calculate planet's degree within a Varga sign"""
         # Range 0-30
         d1_deg_norm = d1_degree % 30.0

@@ -189,6 +189,22 @@ async def generate_chart_get(
                 # Split by comma and clean each chart name
                 charts_list = [c.strip().upper() for c in sanitized.split(',') if c.strip()]
                 # Validate chart names (D1-D60)
+                valid_charts = []
+                for chart in charts_list:
+                    if re.match(r'^D\d{1,2}$', chart):
+                        valid_charts.append(chart)
+                charts_list = valid_charts if valid_charts else None
+        
+        # DEFAULT: If charts parameter is empty or malformed, return D1, D9, D10
+        # actually, let's just leave it as None so engine returns ALL
+        # if not charts_list:
+        #    charts_list = ["D1", "D9", "D10"]
+        
+        chart = engine.generate_full_chart(
+            name=name,
+            dob=dob,
+            tob=tob,
+            place=place,
             latitude=latitude,
             longitude=longitude,
             timezone=timezone,
