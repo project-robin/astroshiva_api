@@ -172,13 +172,23 @@ async def generate_chart_get(
 ):
     """Generate chart using GET parameters (alternative to POST)"""
     try:
-        charts_list = [c.strip() for c in charts.split(',')] if charts else None
-        
-        chart = engine.generate_full_chart(
-            name=name,
-            dob=dob,
-            tob=tob,
-            place=place,
+        # CRITICAL FIX: Sanitize charts parameter
+        # Strip quotes, whitespace, and special characters
+        charts_list = None
+        if charts:
+            # Remove quotes, extra whitespace, and special characters
+            import re
+            from urllib.parse import unquote
+            
+            # First, decode URL encoding (e.g., %22 → ")
+            decoded = unquote(charts)
+            # Then remove quotes, spaces, and other artifacts
+            sanitized = re.sub(r'["\'\s]+', '', decoded)
+            
+            if sanitized:
+                # Split by comma and clean each chart name
+                charts_list = [c.strip().upper() for c in sanitized.split(',') if c.strip()]
+                # Validate chart names (D1-D60)
             latitude=latitude,
             longitude=longitude,
             timezone=timezone,

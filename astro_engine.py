@@ -173,41 +173,6 @@ class AstroEngine:
             raise ValueError(f"Error generating chart: {str(e)}")
     
     
-    def _extract_divisional_charts(self, chart, charts_filter=None) -> Dict[str, Any]:
-        """Extract divisional charts (D1-D60), optionally filtered"""
-        charts_out = {}
-        
-        # Default to all if None
-        # If specific list provided, always include D1
-        target_charts = [c.upper() for c in charts_filter] if charts_filter else None
-        
-        try:
-            # Create a map of D1 degrees for calculating Varga degrees
-            d1_degrees = {}
-            if hasattr(chart.d1_chart, 'planets'):
-                for p in chart.d1_chart.planets:
-                    # Ensure we have a float for degree
-                    deg = 0.0
-                    if hasattr(p, 'sign_degrees'):
-                        deg = float(p.sign_degrees)
-                    d1_degrees[p.celestial_body] = deg
-
-            # D1 (Rashi chart) is main
-            if not target_charts or 'D1' in target_charts:
-                charts_out['D1'] = self._format_chart_data(chart.d1_chart, 'D1', d1_degrees)
-            
-            # D2-D60 divisional charts
-            for chart_name, divisional_chart in chart.divisional_charts.items():
-                c_name_upper = chart_name.upper()
-                if target_charts and c_name_upper not in target_charts:
-                    continue
-                charts_out[c_name_upper] = self._format_chart_data(divisional_chart, c_name_upper, d1_degrees)
-        except Exception as e:
-            print(f"Warning: Could not extract all divisional charts: {e}")
-        
-        return charts_out
-    
-    def _calculate_varga_degree(self, d1_degree: float, harmonic: int) -> float:
         """Calculate planet's degree within a Varga sign"""
         # Range 0-30
         d1_deg_norm = d1_degree % 30.0
@@ -659,16 +624,33 @@ class AstroEngine:
             
             signs = ["", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
             
+            # Store Rahu position for Ketu calculation
+            rahu_longitude = None
+            
             for p_name, p_id in planets.items():
-                res = swe.calc_ut(jd_now, p_id, swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
+                # CRITICAL FIX: Calculate Ketu as 180° opposite to Rahu
+                if p_name == 'Ketu':
+                    if rahu_longitude is None:
+                        # Calculate Rahu first if not done yet
+                        continue
+                    # Ketu is exactly 180° opposite to Rahu
+                    deg_total = (rahu_longitude + 180) % 360
+                    speed = 0.0  # Ketu moves with Rahu but opposite
+                else:
+                    res = swe.calc_ut(jd_now, p_id, swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
+                    
+                    # Compatibility fix
+                    data_tuple = res
+                    if isinstance(res[0], (list, tuple)):
+                        data_tuple = res[0]
+                    
+                    deg_total = data_tuple[0]
+                    speed = data_tuple[3] if len(data_tuple) > 3 else 0.0
+                    
+                    # Store Rahu longitude for Ketu calculation
+                    if p_name == 'Rahu':
+                        rahu_longitude = deg_total
                 
-                # Compatibility fix
-                data_tuple = res
-                if isinstance(res[0], (list, tuple)):
-                    data_tuple = res[0]
-                
-                deg_total = data_tuple[0]
-                speed = data_tuple[3] if len(data_tuple) > 3 else 0.0
                 sign_num = int(deg_total / 30) + 1
                 deg_rem = deg_total % 30
                 
@@ -683,9 +665,25 @@ class AstroEngine:
                     "current_sign": sign_name,
                     "current_degree": deg_rem,
                     "house_from_birth_moon": house_from_moon,
+                    "is_retrograde": speed < 0
+                }
+            
+            # Handle Ketu if it was skipped (process it now with Rahu's position)
+            if 'Ketu' not in transits and rahu_longitude is not None:
+                deg_total = (rahu_longitude + 180) % 360
+                sign_num = int(deg_total / 30) + 1
+                deg_rem = deg_total % 30
+                sign_name = signs[sign_num] if 1 <= sign_num <= 12 else "Unknown"
+                
+                from_moon = (sign_num - self._get_sign_num(birth_moon_sign)) % 12
+                if from_moon < 0: from_moon += 12
+                house_from_moon = from_moon + 1
+                
+                transits['Ketu'] = {
+                    "current_sign": sign_name,
                     "current_degree": deg_rem,
                     "house_from_birth_moon": house_from_moon,
-                    "is_retrograde": speed < 0
+                    "is_retrograde": False
                 }
                 
         except Exception as e:

@@ -1,0 +1,14 @@
+======================================================================
+TEST 1: Charts Parameter Sanitization
+======================================================================
+Traceback (most recent call last):
+  File "D:\building apps\astro-shiva 2.0\12astro\verify_fixes.py", line 82, in <module>
+    test_charts_sanitization()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\building apps\astro-shiva 2.0\12astro\verify_fixes.py", line 42, in test_charts_sanitization
+    print(f"{status} | {description}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>

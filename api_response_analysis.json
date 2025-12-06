@@ -1,0 +1,1442 @@
+{
+  "status": "success",
+  "data": {
+    "user_details": {
+      "name": "John",
+      "dob": "1990-05-15",
+      "tob": "14:30:00",
+      "pob": "Mumbai",
+      "latitude": 19.076,
+      "longitude": 72.8777,
+      "timezone_offset": 5.5,
+      "generated_at": "2025-12-06T01:34:35.261301"
+    },
+    "divisional_charts": {
+      "D1": {
+        "ascendant": {
+          "sign": "Leo",
+          "lord": "Sun",
+          "degree": 21.202437244809005,
+          "total_degree": 171.202437244809
+        },
+        "planets": {
+          "Sun": {
+            "sign": "Taurus",
+            "degree": 0.5498245499911576,
+            "nakshatra": "Krittika",
+            "pada": 2,
+            "house": 10,
+            "retrograde": false,
+            "dignity": "neutral",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 4,
+                  "aspect_type": "7"
+                }
+              ],
+              "receives": [
+                {
+                  "from_planet": "Rahu",
+                  "aspect_type": "5"
+                },
+                {
+                  "from_planet": "Mars",
+                  "aspect_type": "4"
+                }
+              ]
+            },
+            "is_combust": false,
+            "speed": 0.9642027139635874,
+            "speed_status": "normal",
+            "sign_id": 2,
+            "total_degree": 30.549824549991158,
+            "kp": {
+              "sign_lord": "Venus",
+              "nakshatra_lord": "Sun",
+              "sub_lord": "Rahu",
+              "sub_sub_lord": "Venus"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Dead",
+                "full_name": "Dead (Mrita)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Moon": {
+            "sign": "Capricorn",
+            "degree": 1.8935824503706158,
+            "nakshatra": "Uttara Ashadha",
+            "pada": 2,
+            "house": 6,
+            "retrograde": false,
+            "dignity": "neutral",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 12,
+                  "aspect_type": "7"
+                },
+                {
+                  "to_planet": "Ketu",
+                  "aspect_type": "7"
+                }
+              ],
+              "receives": []
+            },
+            "is_combust": false,
+            "speed": 12.32602109830084,
+            "speed_status": "normal",
+            "sign_id": 10,
+            "total_degree": 271.8935824503706,
+            "kp": {
+              "sign_lord": "Saturn",
+              "nakshatra_lord": "Sun",
+              "sub_lord": "Jupiter",
+              "sub_sub_lord": "Mercury"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Dead",
+                "full_name": "Dead (Mrita)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Mars": {
+            "sign": "Aquarius",
+            "degree": 24.51524853443499,
+            "nakshatra": "Purva Bhadrapada",
+            "pada": 2,
+            "house": 7,
+            "retrograde": false,
+            "dignity": "neutral",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 10,
+                  "aspect_type": "4"
+                },
+                {
+                  "to_house": 1,
+                  "aspect_type": "7"
+                },
+                {
+                  "to_planet": "Sun",
+                  "aspect_type": "4"
+                },
+                {
+                  "to_house": 2,
+                  "aspect_type": "8"
+                }
+              ],
+              "receives": [
+                {
+                  "from_planet": "Jupiter",
+                  "aspect_type": "9"
+                }
+              ]
+            },
+            "is_combust": false,
+            "speed": 0.7427045450102903,
+            "speed_status": "fast",
+            "sign_id": 11,
+            "total_degree": 324.515248534435,
+            "kp": {
+              "sign_lord": "Saturn",
+              "nakshatra_lord": "Jupiter",
+              "sub_lord": "Mercury",
+              "sub_sub_lord": "Venus"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Dead",
+                "full_name": "Dead (Mrita)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Mercury": {
+            "sign": "Aries",
+            "degree": 14.302326704635027,
+            "nakshatra": "Bharani",
+            "pada": 1,
+            "house": 9,
+            "retrograde": false,
+            "dignity": "neutral",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 3,
+                  "aspect_type": "7"
+                }
+              ],
+              "receives": []
+            },
+            "is_combust": false,
+            "speed": -0.12975425282546998,
+            "speed_status": "slow",
+            "sign_id": 1,
+            "total_degree": 14.302326704635027,
+            "kp": {
+              "sign_lord": "Mars",
+              "nakshatra_lord": "Venus",
+              "sub_lord": "Venus",
+              "sub_sub_lord": "Rahu"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Adolescent",
+                "full_name": "Adolescent (Yuva)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Jupiter": {
+            "sign": "Gemini",
+            "degree": 15.792289324335897,
+            "nakshatra": "Ardra",
+            "pada": 3,
+            "house": 11,
+            "retrograde": false,
+            "dignity": "neutral",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 5,
+                  "aspect_type": "7"
+                },
+                {
+                  "to_planet": "Mars",
+                  "aspect_type": "9"
+                },
+                {
+                  "to_house": 3,
+                  "aspect_type": "5"
+                },
+                {
+                  "to_house": 7,
+                  "aspect_type": "9"
+                }
+              ],
+              "receives": []
+            },
+            "is_combust": false,
+            "speed": 0.1889790693449908,
+            "speed_status": "fast",
+            "sign_id": 3,
+            "total_degree": 75.7922893243359,
+            "kp": {
+              "sign_lord": "Mercury",
+              "nakshatra_lord": "Rahu",
+              "sub_lord": "Venus",
+              "sub_sub_lord": "Moon"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Adolescent",
+                "full_name": "Adolescent (Yuva)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Venus": {
+            "sign": "Pisces",
+            "degree": 18.949985969961006,
+            "nakshatra": "Revati",
+            "pada": 1,
+            "house": 8,
+            "retrograde": false,
+            "dignity": "exalted",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 2,
+                  "aspect_type": "7"
+                }
+              ],
+              "receives": [
+                {
+                  "from_planet": "Saturn",
+                  "aspect_type": "3"
+                },
+                {
+                  "from_planet": "Ketu",
+                  "aspect_type": "9"
+                }
+              ]
+            },
+            "is_combust": false,
+            "speed": 1.1403769366343024,
+            "speed_status": "slow",
+            "sign_id": 12,
+            "total_degree": 348.949985969961,
+            "kp": {
+              "sign_lord": "Jupiter",
+              "nakshatra_lord": "Mercury",
+              "sub_lord": "Ketu",
+              "sub_sub_lord": "Rahu"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Young",
+                "full_name": "Young (Kumara)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Saturn": {
+            "sign": "Capricorn",
+            "degree": 1.525780932578698,
+            "nakshatra": "Uttara Ashadha",
+            "pada": 2,
+            "house": 6,
+            "retrograde": false,
+            "dignity": "moolatrikona",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 3,
+                  "aspect_type": "10"
+                },
+                {
+                  "to_planet": "Ketu",
+                  "aspect_type": "7"
+                },
+                {
+                  "to_planet": "Venus",
+                  "aspect_type": "3"
+                },
+                {
+                  "to_house": 8,
+                  "aspect_type": "3"
+                },
+                {
+                  "to_house": 12,
+                  "aspect_type": "7"
+                }
+              ],
+              "receives": []
+            },
+            "is_combust": false,
+            "speed": -0.016760896791352575,
+            "speed_status": "slow",
+            "sign_id": 10,
+            "total_degree": 271.5257809325787,
+            "kp": {
+              "sign_lord": "Saturn",
+              "nakshatra_lord": "Sun",
+              "sub_lord": "Jupiter",
+              "sub_sub_lord": "Saturn"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Dead",
+                "full_name": "Dead (Mrita)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Rahu": {
+            "sign": "Capricorn",
+            "degree": 17.62000133107182,
+            "nakshatra": "Shravana",
+            "pada": 3,
+            "house": 6,
+            "retrograde": false,
+            "dignity": "neutral",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 2,
+                  "aspect_type": "9"
+                },
+                {
+                  "to_house": 10,
+                  "aspect_type": "5"
+                },
+                {
+                  "to_planet": "Sun",
+                  "aspect_type": "5"
+                }
+              ],
+              "receives": []
+            },
+            "is_combust": false,
+            "speed": -0.05299203039376033,
+            "speed_status": "normal",
+            "sign_id": 10,
+            "total_degree": 287.6200013310718,
+            "kp": {
+              "sign_lord": "Saturn",
+              "nakshatra_lord": "Moon",
+              "sub_lord": "Saturn",
+              "sub_sub_lord": "Jupiter"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Adolescent",
+                "full_name": "Adolescent (Yuva)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          },
+          "Ketu": {
+            "sign": "Cancer",
+            "degree": 17.62000133107182,
+            "nakshatra": "Ashlesha",
+            "pada": 1,
+            "house": 12,
+            "retrograde": false,
+            "dignity": "neutral",
+            "aspects": {
+              "gives": [
+                {
+                  "to_house": 4,
+                  "aspect_type": "5"
+                },
+                {
+                  "to_house": 8,
+                  "aspect_type": "9"
+                },
+                {
+                  "to_planet": "Venus",
+                  "aspect_type": "9"
+                }
+              ],
+              "receives": [
+                {
+                  "from_planet": "Moon",
+                  "aspect_type": "7"
+                },
+                {
+                  "from_planet": "Saturn",
+                  "aspect_type": "7"
+                }
+              ]
+            },
+            "is_combust": false,
+            "speed": -0.05299203039376033,
+            "speed_status": "normal",
+            "sign_id": 10,
+            "total_degree": 287.6200013310718,
+            "kp": {
+              "sign_lord": "Saturn",
+              "nakshatra_lord": "Moon",
+              "sub_lord": "Saturn",
+              "sub_sub_lord": "Jupiter"
+            },
+            "avasthas": {
+              "baaladi": {
+                "state": "Adolescent",
+                "full_name": "Adolescent (Yuva)"
+              },
+              "jagradadi": {
+                "state": "Dreaming"
+              }
+            }
+          }
+        },
+        "houses": [
+          {
+            "house": 1,
+            "sign": "Leo",
+            "lord": "Sun",
+            "occupants": [],
+            "cusp": 21.202437244809005,
+            "total_degree": 171.202437244809,
+            "madhya": 5.81132069329243
+          },
+          {
+            "house": 2,
+            "sign": "Virgo",
+            "lord": "Mercury",
+            "occupants": [],
+            "cusp": 20.420204141775855,
+            "total_degree": 200.42020414177586,
+            "madhya": 5.706185004732276
+          },
+          {
+            "house": 3,
+            "sign": "Libra",
+            "lord": "Venus",
+            "occupants": [],
+            "cusp": 20.992165867688698,
+            "total_degree": 230.9921658676887,
+            "madhya": 6.228890524168634
+          },
+          {
+            "house": 4,
+            "sign": "Scorpio",
+            "lord": "Mars",
+            "occupants": [],
+            "cusp": 21.46561518064857,
+            "total_degree": 261.46561518064857,
+            "madhya": 6.535575516929384
+          },
+          {
+            "house": 5,
+            "sign": "Sagittarius",
+            "lord": "Jupiter",
+            "occupants": [],
+            "cusp": 21.605535853210142,
+            "total_degree": 291.60553585321014,
+            "madhya": 6.6534870499464205
+          },
+          {
+            "house": 6,
+            "sign": "Capricorn",
+            "lord": "Saturn",
+            "occupants": [
+              "Moon",
+              "Saturn",
+              "Rahu"
+            ],
+            "cusp": 21.701438246682642,
+            "total_degree": 321.70143824668264,
+            "madhya": 6.451937745745795
+          },
+          {
+            "house": 7,
+            "sign": "Aquarius",
+            "lord": "Saturn",
+            "occupants": [
+              "Mars"
+            ],
+            "cusp": 21.202437244809005,
+            "total_degree": 351.202437244809,
+            "madhya": 5.81132069329243
+          },
+          {
+            "house": 8,
+            "sign": "Pisces",
+            "lord": "Jupiter",
+            "occupants": [
+              "Venus"
+            ],
+            "cusp": 20.420204141775855,
+            "total_degree": 20.420204141775855,
+            "madhya": 5.706185004732276
+          },
+          {
+            "house": 9,
+            "sign": "Aries",
+            "lord": "Mars",
+            "occupants": [
+              "Mercury"
+            ],
+            "cusp": 20.992165867688698,
+            "total_degree": 50.9921658676887,
+            "madhya": 6.228890524168619
+          },
+          {
+            "house": 10,
+            "sign": "Taurus",
+            "lord": "Venus",
+            "occupants": [
+              "Sun"
+            ],
+            "cusp": 21.46561518064854,
+            "total_degree": 81.46561518064854,
+            "madhya": 6.535575516929356
+          },
+          {
+            "house": 11,
+            "sign": "Gemini",
+            "lord": "Mercury",
+            "occupants": [
+              "Jupiter"
+            ],
+            "cusp": 21.605535853210156,
+            "total_degree": 111.60553585321016,
+            "madhya": 6.653487049946392
+          },
+          {
+            "house": 12,
+            "sign": "Cancer",
+            "lord": "Moon",
+            "occupants": [
+              "Ketu"
+            ],
+            "cusp": 21.701438246682613,
+            "total_degree": 141.7014382466826,
+            "madhya": 6.451937745745795
+          }
+        ]
+      },
+      "D9": {
+        "ascendant": {
+          "sign": "Sagittarius",
+          "lord": "Jupiter",
+          "degree": null
+        },
+        "planets": {
+          "Venus": {
+            "sign": "Sagittarius",
+            "house": 1,
+            "degree": 20.646786308817745,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Ketu": {
+            "sign": "Sagittarius",
+            "house": 1,
+            "degree": 7.465172108946938,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Sun": {
+            "sign": "Capricorn",
+            "house": 2,
+            "degree": 5.044937031362053,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Moon": {
+            "sign": "Capricorn",
+            "house": 2,
+            "degree": 17.140598248798142,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Saturn": {
+            "sign": "Capricorn",
+            "house": 2,
+            "degree": 13.828306223065054,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Jupiter": {
+            "sign": "Aquarius",
+            "house": 3,
+            "degree": 22.22769759728653,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Mars": {
+            "sign": "Taurus",
+            "house": 6,
+            "degree": 10.734149750530142,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Rahu": {
+            "sign": "Gemini",
+            "house": 7,
+            "degree": 7.465172108946938,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          },
+          "Mercury": {
+            "sign": "Leo",
+            "house": 9,
+            "degree": 8.817888408665626,
+            "nakshatra": null,
+            "pada": null,
+            "retrograde": false
+          }
+        },
+        "houses": [
+          {
+            "house": 1,
+            "sign": "Sagittarius",
+            "lord": "Jupiter",
+            "occupants": [
+              "Venus",
+              "Ketu"
+            ]
+          },
+          {
+            "house": 2,
+            "sign": "Capricorn",
+            "lord": "Saturn",
+            "occupants": [
+              "Sun",
+              "Moon",
+              "Saturn"
+            ]
+          },
+          {
+            "house": 3,
+            "sign": "Aquarius",
+            "lord": "Saturn",
+            "occupants": [
+              "Jupiter"
+            ]
+          },
+          {
+            "house": 4,
+            "sign": "Pisces",
+            "lord": "Jupiter",
+            "occupants": []
+          },
+          {
+            "house": 5,
+            "sign": "Aries",
+            "lord": "Mars",
+            "occupants": []
+          },
+          {
+            "house": 6,
+            "sign": "Taurus",
+            "lord": "Venus",
+            "occupants": [
+              "Mars"
+            ]
+          },
+          {
+            "house": 7,
+            "sign": "Gemini",
+            "lord": "Mercury",
+            "occupants": [
+              "Rahu"
+            ]
+          },
+          {
+            "house": 8,
+            "sign": "Cancer",
+            "lord": "Moon",
+            "occupants": []
+          },
+          {
+            "house": 9,
+            "sign": "Leo",
+            "lord": "Sun",
+            "occupants": [
+              "Mercury"
+            ]
+          },
+          {
+            "house": 10,
+            "sign": "Virgo",
+            "lord": "Mercury",
+            "occupants": []
+          },
+          {
+            "house": 11,
+            "sign": "Libra",
+            "lord": "Venus",
+            "occupants": []
+          },
+          {
+            "house": 12,
+            "sign": "Scorpio",
+            "lord": "Mars",
+            "occupants": []
+          }
+        ]
+      }
+    },
+    "balas": {
+      "shadbala": {
+        "Sun": {
+          "Sthanabala": {
+            "Uchhabala": 53.146,
+            "Saptavargajabala": 71.25,
+            "Ojhayugmarashiamshabala": 0.0,
+            "Kendradhibala": 60.0,
+            "Drekshanabala": 15.0,
+            "Total": 199.396
+          },
+          "Digbala": 55.187,
+          "Kaalabala": {
+            "Natonnatabala": 35.0,
+            "Pakshabala": 20.448,
+            "Tribhagabala": 0.0,
+            "VarshaMaasaDinaHoraBala": 60.0,
+            "Ayanabala": 107.183,
+            "Total": 222.631
+          },
+          "Cheshtabala": 107.183,
+          "Naisargikabala": 60.0,
+          "Drikbala": -1.857,
+          "Shadbala": {
+            "Total": 642.54,
+            "Rupas": 10.709
+          },
+          "Vimshopaka": {
+            "shadvarga": 9.25,
+            "saptavarga": 9.375,
+            "dashavarga": 9.625,
+            "shodashavarga": 9.25
+          },
+          "Ishtabala": 75.474,
+          "Kashtabala": -15.474
+        },
+        "Moon": {
+          "Sthanabala": {
+            "Uchhabala": 19.635,
+            "Saptavargajabala": 131.25,
+            "Ojhayugmarashiamshabala": 30.0,
+            "Kendradhibala": 15.0,
+            "Drekshanabala": 0.0,
+            "Total": 195.885
+          },
+          "Digbala": 44.365,
+          "Kaalabala": {
+            "Natonnatabala": 25.0,
+            "Pakshabala": 39.552,
+            "Tribhagabala": 0.0,
+            "VarshaMaasaDinaHoraBala": 0.0,
+            "Ayanabala": 2.186,
+            "Total": 66.738
+          },
+          "Cheshtabala": 39.552,
+          "Naisargikabala": 51.43,
+          "Drikbala": 4.468,
+          "Shadbala": {
+            "Total": 402.438,
+            "Rupas": 6.707
+          },
+          "Vimshopaka": {
+            "shadvarga": 12.8,
+            "saptavarga": 12.425,
+            "dashavarga": 11.425,
+            "shodashavarga": 12.025
+          },
+          "Ishtabala": 27.868,
+          "Kashtabala": 32.132
+        },
+        "Mars": {
+          "Sthanabala": {
+            "Uchhabala": 51.158,
+            "Saptavargajabala": 90.0,
+            "Ojhayugmarashiamshabala": 15.0,
+            "Kendradhibala": 60.0,
+            "Drekshanabala": 0.0,
+            "Total": 216.158
+          },
+          "Digbala": 33.175,
+          "Kaalabala": {
+            "Natonnatabala": 25.0,
+            "Pakshabala": 20.448,
+            "Tribhagabala": 0.0,
+            "VarshaMaasaDinaHoraBala": 60.0,
+            "Ayanabala": 22.263,
+            "Total": 127.711,
+            "Yuddhabala": 0.0
+          },
+          "Cheshtabala": 43.97,
+          "Naisargikabala": 17.14,
+          "Drikbala": -1.83,
+          "Shadbala": {
+            "Total": 436.324,
+            "Rupas": 7.272
+          },
+          "Vimshopaka": {
+            "shadvarga": 13.35,
+            "saptavarga": 13.775,
+            "dashavarga": 11.725,
+            "shodashavarga": 10.925
+          },
+          "Ishtabala": 47.428,
+          "Kashtabala": 12.572
+        },
+        "Mercury": {
+          "Sthanabala": {
+            "Uchhabala": 9.771,
+            "Saptavargajabala": 138.75,
+            "Ojhayugmarashiamshabala": 30.0,
+            "Kendradhibala": 15.0,
+            "Drekshanabala": 15.0,
+            "Total": 208.521
+          },
+          "Digbala": 19.771,
+          "Kaalabala": {
+            "Natonnatabala": 60.0,
+            "Pakshabala": 0.0,
+            "Tribhagabala": 60.0,
+            "VarshaMaasaDinaHoraBala": 0.0,
+            "Ayanabala": 44.831,
+            "Total": 164.831,
+            "Yuddhabala": 0.0
+          },
+          "Cheshtabala": 52.325,
+          "Naisargikabala": 25.71,
+          "Drikbala": 1.695,
+          "Shadbala": {
+            "Total": 472.853,
+            "Rupas": 7.881
+          },
+          "Vimshopaka": {
+            "shadvarga": 13.6,
+            "saptavarga": 12.325,
+            "dashavarga": 11.725,
+            "shodashavarga": 12.325
+          },
+          "Ishtabala": 22.611,
+          "Kashtabala": 37.389
+        },
+        "Jupiter": {
+          "Sthanabala": {
+            "Uchhabala": 53.601,
+            "Saptavargajabala": 60.0,
+            "Ojhayugmarashiamshabala": 30.0,
+            "Kendradhibala": 30.0,
+            "Drekshanabala": 0.0,
+            "Total": 173.601
+          },
+          "Digbala": 40.268,
+          "Kaalabala": {
+            "Natonnatabala": 35.0,
+            "Pakshabala": 39.552,
+            "Tribhagabala": 60.0,
+            "VarshaMaasaDinaHoraBala": 0.0,
+            "Ayanabala": 59.039,
+            "Total": 193.591,
+            "Yuddhabala": 0.0
+          },
+          "Cheshtabala": 44.09,
+          "Naisargikabala": 34.29,
+          "Drikbala": -0.219,
+          "Shadbala": {
+            "Total": 485.621,
+            "Rupas": 8.094
+          },
+          "Vimshopaka": {
+            "shadvarga": 8.75,
+            "saptavarga": 8.825,
+            "dashavarga": 9.625,
+            "shodashavarga": 10.025
+          },
+          "Ishtabala": 48.613,
+          "Kashtabala": 11.387
+        },
+        "Venus": {
+          "Sthanabala": {
+            "Uchhabala": 57.32,
+            "Saptavargajabala": 82.5,
+            "Ojhayugmarashiamshabala": 15.0,
+            "Kendradhibala": 30.0,
+            "Drekshanabala": 0.0,
+            "Total": 184.82
+          },
+          "Digbala": 18.68,
+          "Kaalabala": {
+            "Natonnatabala": 35.0,
+            "Pakshabala": 39.552,
+            "Tribhagabala": 0.0,
+            "VarshaMaasaDinaHoraBala": 30.0,
+            "Ayanabala": 34.259,
+            "Total": 138.811,
+            "Yuddhabala": 0.0
+          },
+          "Cheshtabala": 40.526,
+          "Naisargikabala": 42.86,
+          "Drikbala": 8.919,
+          "Shadbala": {
+            "Total": 434.616,
+            "Rupas": 7.244
+          },
+          "Vimshopaka": {
+            "shadvarga": 15.6,
+            "saptavarga": 15.825,
+            "dashavarga": 13.825,
+            "shodashavarga": 13.5
+          },
+          "Ishtabala": 48.197,
+          "Kashtabala": 11.803
+        },
+        "Saturn": {
+          "Sthanabala": {
+            "Uchhabala": 36.155,
+            "Saptavargajabala": 131.25,
+            "Ojhayugmarashiamshabala": 0.0,
+            "Kendradhibala": 15.0,
+            "Drekshanabala": 0.0,
+            "Total": 182.405
+          },
+          "Digbala": 45.512,
+          "Kaalabala": {
+            "Natonnatabala": 25.0,
+            "Pakshabala": 20.448,
+            "Tribhagabala": 0.0,
+            "VarshaMaasaDinaHoraBala": 0.0,
+            "Ayanabala": 3.862,
+            "Total": 49.31,
+            "Yuddhabala": 0.0
+          },
+          "Cheshtabala": 52.509,
+          "Naisargikabala": 8.57,
+          "Drikbala": 4.744,
+          "Shadbala": {
+            "Total": 343.05,
+            "Rupas": 5.718
+          },
+          "Vimshopaka": {
+            "shadvarga": 10.05,
+            "saptavarga": 10.05,
+            "dashavarga": 10.075,
+            "shodashavarga": 10.125
+          },
+          "Ishtabala": 43.571,
+          "Kashtabala": 16.429
+        },
+        "Rahu": {
+          "Kaalabala": {
+            "Pakshabala": 0.0
+          }
+        },
+        "Ketu": {
+          "Kaalabala": {
+            "Pakshabala": 0.0
+          }
+        }
+      },
+      "ashtakavarga": {
+        "sav": {
+          "Aries": 26,
+          "Taurus": 27,
+          "Gemini": 31,
+          "Cancer": 19,
+          "Leo": 29,
+          "Virgo": 25,
+          "Libra": 26,
+          "Scorpio": 38,
+          "Sagittarius": 26,
+          "Capricorn": 31,
+          "Aquarius": 27,
+          "Pisces": 32
+        },
+        "bhav": {
+          "Sun": {
+            "Aries": 2,
+            "Taurus": 3,
+            "Gemini": 4,
+            "Cancer": 2,
+            "Leo": 5,
+            "Virgo": 4,
+            "Libra": 5,
+            "Scorpio": 6,
+            "Sagittarius": 3,
+            "Capricorn": 4,
+            "Aquarius": 6,
+            "Pisces": 4
+          },
+          "Moon": {
+            "Aries": 3,
+            "Taurus": 4,
+            "Gemini": 7,
+            "Cancer": 5,
+            "Leo": 1,
+            "Virgo": 2,
+            "Libra": 5,
+            "Scorpio": 6,
+            "Sagittarius": 4,
+            "Capricorn": 5,
+            "Aquarius": 2,
+            "Pisces": 5
+          },
+          "Mars": {
+            "Aries": 2,
+            "Taurus": 3,
+            "Gemini": 3,
+            "Cancer": 2,
+            "Leo": 5,
+            "Virgo": 4,
+            "Libra": 4,
+            "Scorpio": 4,
+            "Sagittarius": 1,
+            "Capricorn": 3,
+            "Aquarius": 4,
+            "Pisces": 4
+          },
+          "Mercury": {
+            "Aries": 6,
+            "Taurus": 4,
+            "Gemini": 4,
+            "Cancer": 2,
+            "Leo": 5,
+            "Virgo": 5,
+            "Libra": 5,
+            "Scorpio": 6,
+            "Sagittarius": 2,
+            "Capricorn": 6,
+            "Aquarius": 4,
+            "Pisces": 5
+          },
+          "Jupiter": {
+            "Aries": 4,
+            "Taurus": 6,
+            "Gemini": 4,
+            "Cancer": 5,
+            "Leo": 6,
+            "Virgo": 5,
+            "Libra": 0,
+            "Scorpio": 5,
+            "Sagittarius": 7,
+            "Capricorn": 5,
+            "Aquarius": 5,
+            "Pisces": 4
+          },
+          "Venus": {
+            "Aries": 7,
+            "Taurus": 3,
+            "Gemini": 4,
+            "Cancer": 2,
+            "Leo": 4,
+            "Virgo": 4,
+            "Libra": 5,
+            "Scorpio": 4,
+            "Sagittarius": 6,
+            "Capricorn": 4,
+            "Aquarius": 3,
+            "Pisces": 6
+          },
+          "Saturn": {
+            "Aries": 2,
+            "Taurus": 4,
+            "Gemini": 5,
+            "Cancer": 1,
+            "Leo": 3,
+            "Virgo": 1,
+            "Libra": 2,
+            "Scorpio": 7,
+            "Sagittarius": 3,
+            "Capricorn": 4,
+            "Aquarius": 3,
+            "Pisces": 4
+          }
+        }
+      }
+    },
+    "dashas": {
+      "vimshottari": {
+        "mahadasha": [
+          {
+            "lord": "Rahu",
+            "start_date": "2011-01-05 13:55:36.229822",
+            "end_date": "2029-01-05 04:40:27.301822"
+          },
+          {
+            "lord": "Jupiter",
+            "start_date": "2029-01-05 04:40:27.301822",
+            "end_date": "2045-01-05 07:06:59.365822"
+          }
+        ],
+        "current_dasha": {
+          "mahadashas": {
+            "Rahu": {
+              "start": "2011-01-05T13:55:36.229822",
+              "end": "2029-01-05T04:40:27.301822",
+              "antardashas": {
+                "Sun": {
+                  "start": "2025-07-25T01:26:51.513022",
+                  "end": "2026-06-18T18:59:06.066622",
+                  "pratyantardashas": {
+                    "Jupiter": {
+                      "start": "2025-11-14T09:02:22.485502",
+                      "end": "2025-12-28T04:58:40.425982"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "antardashas_in_current_mahadasha": [
+          {
+            "lord": "Rahu",
+            "start": "2011-01-05 13:55:36.229822",
+            "end": "2013-09-17 18:32:19.890622"
+          },
+          {
+            "lord": "Jupiter",
+            "start": "2013-09-17 18:32:19.890622",
+            "end": "2016-02-11 09:18:18.700222"
+          },
+          {
+            "lord": "Saturn",
+            "start": "2016-02-11 09:18:18.700222",
+            "end": "2018-12-18 08:50:24.786622"
+          },
+          {
+            "lord": "Mercury",
+            "start": "2018-12-18 08:50:24.786622",
+            "end": "2021-07-06 18:31:46.021822"
+          },
+          {
+            "lord": "Ketu",
+            "start": "2021-07-06 18:31:46.021822",
+            "end": "2022-07-25 06:59:23.001022"
+          },
+          {
+            "lord": "Venus",
+            "start": "2022-07-25 06:59:23.001022",
+            "end": "2025-07-25 01:26:51.513022"
+          },
+          {
+            "lord": "Sun",
+            "start": "2025-07-25 01:26:51.513022",
+            "end": "2026-06-18 18:59:06.066622"
+          },
+          {
+            "lord": "Moon",
+            "start": "2026-06-18 18:59:06.066622",
+            "end": "2027-12-18 16:12:50.322622"
+          },
+          {
+            "lord": "Mars",
+            "start": "2027-12-18 16:12:50.322622",
+            "end": "2029-01-05 04:40:27.301822"
+          }
+        ]
+      }
+    },
+    "nakshatra": {
+      "Sun": {
+        "nakshatra": "Krittika",
+        "pada": 2
+      },
+      "Moon": {
+        "nakshatra": "Uttara Ashadha",
+        "pada": 2
+      },
+      "Mars": {
+        "nakshatra": "Purva Bhadrapada",
+        "pada": 2
+      },
+      "Mercury": {
+        "nakshatra": "Bharani",
+        "pada": 1
+      },
+      "Jupiter": {
+        "nakshatra": "Ardra",
+        "pada": 3
+      },
+      "Venus": {
+        "nakshatra": "Revati",
+        "pada": 1
+      },
+      "Saturn": {
+        "nakshatra": "Uttara Ashadha",
+        "pada": 2
+      },
+      "Rahu": {
+        "nakshatra": "Shravana",
+        "pada": 3
+      },
+      "Ketu": {
+        "nakshatra": "Ashlesha",
+        "pada": 1
+      }
+    },
+    "panchang": {
+      "tithi": "Krishna Shashthi",
+      "vara": "Tuesday",
+      "yoga": "Shubha",
+      "karana": "Gara",
+      "nakshatra": "Uttara Ashadha"
+    },
+    "yogas": {
+      "raja_yogas": [
+        {
+          "name": "Vipreet Raja Yoga",
+          "description": "6th Lord (Saturn) is in a Trik house (6). Success after struggle."
+        },
+        {
+          "name": "Vipreet Raja Yoga",
+          "description": "12th Lord (Moon) is in a Trik house (6). Success after struggle."
+        }
+      ],
+      "dhana_yogas": [],
+      "other_yogas": []
+    },
+    "doshas": {
+      "manglik": {
+        "present": true,
+        "type": "High",
+        "description": "Mars in house 7"
+      },
+      "kaal_sarp": {
+        "present": false,
+        "type": null
+      },
+      "pitra_dosha": {
+        "present": false
+      }
+    },
+    "meta": {
+      "api_version": "2.0.0",
+      "calculation_method": "nc_lahiri",
+      "ayanamsa": "Lahiri",
+      "engine": "astro-shiva-engine-v2",
+      "features": [
+        "Jaimini",
+        "KP",
+        "Avasthas",
+        "Transits"
+      ]
+    },
+    "jaimini_karakas": {
+      "Atmakaraka": {
+        "planet": "Mars",
+        "description": "Significator of the Soul/Self"
+      },
+      "Amatyakaraka": {
+        "planet": "Venus",
+        "description": "Significator of Career/Minister"
+      },
+      "Bhratrukaraka": {
+        "planet": "Jupiter",
+        "description": "Significator of Siblings/Guru"
+      },
+      "Matrukaraka": {
+        "planet": "Mercury",
+        "description": "Significator of Mother"
+      },
+      "Putrakaraka": {
+        "planet": "Moon",
+        "description": "Significator of Children"
+      },
+      "Gnatikaraka": {
+        "planet": "Saturn",
+        "description": "Significator of Relations/Enemies"
+      },
+      "Darakaraka": {
+        "planet": "Sun",
+        "description": "Significator of Spouse"
+      }
+    },
+    "panchadha_maitri": {
+      "Sun": {
+        "Moon": "Neutral",
+        "Mars": "Great Friend",
+        "Mercury": "Friend",
+        "Jupiter": "Great Friend",
+        "Venus": "Neutral",
+        "Saturn": "Great Enemy"
+      },
+      "Moon": {
+        "Sun": "Neutral",
+        "Mars": "Friend",
+        "Mercury": "Great Friend",
+        "Jupiter": "Enemy",
+        "Venus": "Friend",
+        "Saturn": "Enemy"
+      },
+      "Mars": {
+        "Sun": "Great Friend",
+        "Moon": "Great Friend",
+        "Mercury": "Neutral",
+        "Jupiter": "Neutral",
+        "Venus": "Friend",
+        "Saturn": "Friend"
+      },
+      "Mercury": {
+        "Sun": "Great Friend",
+        "Moon": "Neutral",
+        "Mars": "Friend",
+        "Jupiter": "Friend",
+        "Venus": "Great Friend",
+        "Saturn": "Friend"
+      },
+      "Jupiter": {
+        "Sun": "Great Friend",
+        "Moon": "Neutral",
+        "Mars": "Neutral",
+        "Mercury": "Neutral",
+        "Venus": "Neutral",
+        "Saturn": "Enemy"
+      },
+      "Venus": {
+        "Sun": "Neutral",
+        "Moon": "Neutral",
+        "Mars": "Friend",
+        "Mercury": "Great Friend",
+        "Jupiter": "Friend",
+        "Saturn": "Great Friend"
+      },
+      "Saturn": {
+        "Sun": "Great Enemy",
+        "Moon": "Great Enemy",
+        "Mars": "Neutral",
+        "Mercury": "Great Friend",
+        "Jupiter": "Enemy",
+        "Venus": "Great Friend"
+      }
+    },
+    "current_transits": {
+      "Sun": {
+        "current_sign": "Scorpio",
+        "current_degree": 19.95475566992232,
+        "house_from_birth_moon": 11,
+        "is_retrograde": false
+      },
+      "Moon": {
+        "current_sign": "Gemini",
+        "current_degree": 5.567316168426672,
+        "house_from_birth_moon": 6,
+        "is_retrograde": false
+      },
+      "Mars": {
+        "current_sign": "Scorpio",
+        "current_degree": 28.841866245712055,
+        "house_from_birth_moon": 11,
+        "is_retrograde": false
+      },
+      "Mercury": {
+        "current_sign": "Libra",
+        "current_degree": 29.496555595223413,
+        "house_from_birth_moon": 10,
+        "is_retrograde": false
+      },
+      "Jupiter": {
+        "current_sign": "Gemini",
+        "current_degree": 29.95608093697605,
+        "house_from_birth_moon": 6,
+        "is_retrograde": false
+      },
+      "Venus": {
+        "current_sign": "Scorpio",
+        "current_degree": 12.346882203376083,
+        "house_from_birth_moon": 11,
+        "is_retrograde": false
+      },
+      "Saturn": {
+        "current_sign": "Pisces",
+        "current_degree": 0.993472884434027,
+        "house_from_birth_moon": 3,
+        "is_retrograde": false
+      },
+      "Rahu": {
+        "current_sign": "Aquarius",
+        "current_degree": 19.323275490075332,
+        "house_from_birth_moon": 2,
+        "is_retrograde": false
+      },
+      "Ketu": {
+        "current_sign": "Aquarius",
+        "current_degree": 19.323275490075332,
+        "house_from_birth_moon": 2,
+        "is_retrograde": false
+      }
+    }
+  }
+}
