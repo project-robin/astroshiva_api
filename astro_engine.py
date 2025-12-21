@@ -119,7 +119,7 @@ class AstroEngine:
                 'timezone_offset': tz_offset
             }
             
-            # Generate chart using jyotishganit (single function call!)
+            # Generate chart using jyotishganit (for dashas, yogas, balas, etc.)
             chart = calculate_birth_chart(
                 birth_date=birth_datetime,
                 latitude=latitude,
@@ -131,6 +131,18 @@ class AstroEngine:
             
             # Store for reference
             self.current_chart = chart
+            
+            # Calculate Julian Day for SwissEph calculations
+            try:
+                import swisseph as swe
+                utc_time = birth_datetime.hour - tz_offset + (birth_datetime.minute/60.0) + (birth_datetime.second/3600.0)
+                jd_ut = swe.julday(birth_datetime.year, birth_datetime.month, birth_datetime.day, utc_time)
+                
+                # Use our custom SwissEph-based divisional chart engine
+                divisional_charts = self._calculate_divisional_charts_swisseph(jd_ut, latitude, longitude, charts)
+            except ImportError:
+                # Fallback to jyotishganit if SwissEph not available
+                divisional_charts = self._extract_divisional_charts(chart, charts_filter=charts)
             
             # Extract and format output
             output = {
@@ -144,7 +156,7 @@ class AstroEngine:
                     "timezone_offset": tz_offset,
                     "generated_at": datetime.now().isoformat()
                 },
-                "divisional_charts": self._extract_divisional_charts(chart, charts_filter=charts),
+                "divisional_charts": divisional_charts,
                 "balas": self._extract_balas(chart),
                 "dashas": self._extract_dashas(chart),
                 "nakshatra": self._extract_nakshatras(chart),
@@ -152,16 +164,15 @@ class AstroEngine:
                 "yogas": self._extract_yogas(chart),
                 "doshas": self._calculate_doshas(chart),
                 "meta": {
-                     "api_version": "2.0.0",
-                     "calculation_method": "nc_lahiri",
+                     "api_version": "2.1.0",
+                     "calculation_method": "swisseph_parashara",
                      "ayanamsa": "Lahiri",
-                     "engine": "astro-shiva-engine-v2",
-                     "features": ["Jaimini", "KP", "Avasthas", "Transits"]
+                     "engine": "astro-shiva-engine-v2.1",
+                     "features": ["Jaimini", "KP", "Avasthas", "Transits", "Custom Varga Engine"]
                 }
             }
             
-            # Enrich with direct calculations for missing data
-            # This now also populates KP, Avasthas etc via _enrich_chart_data -> methods
+            # Enrich with additional calculations (KP, Avasthas, Transits, etc.)
             self._enrich_chart_data(output, birth_datetime, latitude, longitude, tz_offset)
             
             return output
@@ -301,6 +312,323 @@ class AstroEngine:
         
         return (sign_name, varga_sign, varga_degree)
 
+    def _get_planet_varga_sign(self, total_degree: float, harmonic: int) -> tuple:
+        """
+        Calculate which sign a planet falls in for a divisional chart.
+        Uses correct Parashara formulas for each varga type.
+        
+        Args:
+            total_degree: Planet's total sidereal longitude (0-360)
+            harmonic: Divisor (2 for D2, 9 for D9, etc.)
+        
+        Returns:
+            Tuple of (sign_name, sign_index_1based, degree_in_varga_sign)
+        """
+        signs = ["", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", 
+                 "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
+        
+        d1_sign = int(total_degree / 30) + 1  # 1-based
+        deg_in_sign = total_degree % 30
+        division_span = 30.0 / harmonic
+        division_index = int(deg_in_sign / division_span)
+        varga_degree = ((deg_in_sign % division_span) / division_span) * 30.0
+        
+        if harmonic == 2:  # D2 Hora
+            # First half = Sun's hora (Leo), Second half = Moon's hora (Cancer)
+            # For odd signs: 0-15° = Leo, 15-30° = Cancer
+            # For even signs: 0-15° = Cancer, 15-30° = Leo
+            if d1_sign % 2 == 1:  # Odd sign
+                varga_sign = 5 if deg_in_sign < 15 else 4
+            else:
+                varga_sign = 4 if deg_in_sign < 15 else 5
+                
+        elif harmonic == 3:  # D3 Drekkana
+            if division_index == 0:
+                varga_sign = d1_sign
+            elif division_index == 1:
+                varga_sign = ((d1_sign - 1 + 4) % 12) + 1
+            else:
+                varga_sign = ((d1_sign - 1 + 8) % 12) + 1
+                
+        elif harmonic == 9:  # D9 Navamsa
+            # Starting sign based on element of D1 sign
+            if d1_sign in [1, 5, 9]:  # Fire
+                start = 1
+            elif d1_sign in [2, 6, 10]:  # Earth
+                start = 10
+            elif d1_sign in [3, 7, 11]:  # Air
+                start = 7
+            else:  # Water
+                start = 4
+            varga_sign = ((start - 1) + division_index) % 12 + 1
+            
+        elif harmonic == 7:  # D7 Saptamsa
+            # Odd signs: Count from same sign
+            # Even signs: Count from 7th sign
+            if d1_sign % 2 == 1:
+                varga_sign = ((d1_sign - 1) + division_index) % 12 + 1
+            else:
+                start = ((d1_sign - 1 + 6) % 12) + 1  # 7th from d1_sign
+                varga_sign = ((start - 1) + division_index) % 12 + 1
+                
+        elif harmonic == 10:  # D10 Dasamsa
+            # Odd signs: Count from same sign
+            # Even signs: Count from 9th sign
+            if d1_sign % 2 == 1:
+                varga_sign = ((d1_sign - 1) + division_index) % 12 + 1
+            else:
+                start = ((d1_sign - 1 + 8) % 12) + 1  # 9th from d1_sign
+                varga_sign = ((start - 1) + division_index) % 12 + 1
+                
+        elif harmonic == 12:  # D12 Dwadasamsa
+            # Count from same sign
+            varga_sign = ((d1_sign - 1) + division_index) % 12 + 1
+            
+        elif harmonic == 16:  # D16 Shodasamsa
+            # Movable signs: from Aries, Fixed: from Leo, Dual: from Sagittarius
+            if d1_sign in [1, 4, 7, 10]:  # Movable
+                start = 1
+            elif d1_sign in [2, 5, 8, 11]:  # Fixed
+                start = 5
+            else:  # Dual
+                start = 9
+            varga_sign = ((start - 1) + division_index) % 12 + 1
+            
+        elif harmonic == 20:  # D20 Vimshamsa
+            # Movable: Aries, Fixed: Sagittarius, Dual: Leo
+            if d1_sign in [1, 4, 7, 10]:
+                start = 1
+            elif d1_sign in [2, 5, 8, 11]:
+                start = 9
+            else:
+                start = 5
+            varga_sign = ((start - 1) + division_index) % 12 + 1
+            
+        elif harmonic == 24:  # D24 Chaturvimshamsa
+            # Odd signs: from Leo, Even signs: from Cancer
+            if d1_sign % 2 == 1:
+                start = 5
+            else:
+                start = 4
+            varga_sign = ((start - 1) + division_index) % 12 + 1
+            
+        elif harmonic == 27:  # D27 Saptavimshamsa/Bhamsa
+            # Fire: Aries, Earth: Cancer, Air: Libra, Water: Capricorn
+            if d1_sign in [1, 5, 9]:
+                start = 1
+            elif d1_sign in [2, 6, 10]:
+                start = 4
+            elif d1_sign in [3, 7, 11]:
+                start = 7
+            else:
+                start = 10
+            varga_sign = ((start - 1) + division_index) % 12 + 1
+            
+        elif harmonic == 30:  # D30 Trimshamsa
+            # Special rules based on degrees and odd/even sign
+            if d1_sign % 2 == 1:  # Odd sign
+                if deg_in_sign < 5:
+                    varga_sign = 1  # Aries (Mars)
+                elif deg_in_sign < 10:
+                    varga_sign = 11  # Aquarius (Saturn)
+                elif deg_in_sign < 18:
+                    varga_sign = 9  # Sagittarius (Jupiter)
+                elif deg_in_sign < 25:
+                    varga_sign = 3  # Gemini (Mercury)
+                else:
+                    varga_sign = 7  # Libra (Venus)
+            else:  # Even sign - reverse order
+                if deg_in_sign < 5:
+                    varga_sign = 2  # Taurus (Venus)
+                elif deg_in_sign < 12:
+                    varga_sign = 6  # Virgo (Mercury)
+                elif deg_in_sign < 20:
+                    varga_sign = 12  # Pisces (Jupiter)
+                elif deg_in_sign < 25:
+                    varga_sign = 10  # Capricorn (Saturn)
+                else:
+                    varga_sign = 8  # Scorpio (Mars)
+                    
+        else:  # Generic for D4, D40, D45, D60 etc.
+            varga_sign = ((d1_sign - 1) * harmonic + division_index) % 12 + 1
+        
+        sign_name = signs[varga_sign] if 1 <= varga_sign <= 12 else "Unknown"
+        return (sign_name, varga_sign, varga_degree)
+
+    def _calculate_divisional_charts_swisseph(self, jd_ut: float, lat: float, lon: float, 
+                                               charts_filter: list = None) -> Dict[str, Any]:
+        """
+        Calculate ALL divisional charts using Swiss Ephemeris directly.
+        This replaces jyotishganit's divisional chart calculations with our own.
+        
+        Args:
+            jd_ut: Julian Day in UT
+            lat, lon: Geographic coordinates
+            charts_filter: Optional list of charts to calculate (e.g., ['D1', 'D9'])
+        
+        Returns:
+            Dictionary of divisional charts with full planet/house data
+        """
+        try:
+            import swisseph as swe
+        except ImportError:
+            return {}
+        
+        swe.set_sid_mode(swe.SIDM_LAHIRI)
+        
+        signs = ["", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", 
+                 "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
+        
+        # All supported divisional charts
+        all_charts = ['D1', 'D2', 'D3', 'D4', 'D7', 'D9', 'D10', 'D12', 
+                      'D16', 'D20', 'D24', 'D27', 'D30', 'D40', 'D45', 'D60']
+        
+        target_charts = [c.upper() for c in charts_filter] if charts_filter else all_charts
+        
+        # 1. Calculate D1 Ascendant (sidereal)
+        cusps, ascmc = swe.houses_ex(jd_ut, lat, lon, b'P', swe.FLG_SIDEREAL)
+        d1_asc_total = ascmc[0]
+        
+        # 2. Calculate all planet positions
+        planets_map = {
+            'Sun': swe.SUN, 'Moon': swe.MOON, 'Mars': swe.MARS,
+            'Mercury': swe.MERCURY, 'Jupiter': swe.JUPITER,
+            'Venus': swe.VENUS, 'Saturn': swe.SATURN,
+            'Rahu': swe.MEAN_NODE
+        }
+        
+        planet_longitudes = {}  # Store total sidereal longitude for each planet
+        planet_speeds = {}
+        
+        for p_name, p_id in planets_map.items():
+            res = swe.calc_ut(jd_ut, p_id, swe.FLG_SWIEPH | swe.FLG_SIDEREAL | swe.FLG_SPEED)
+            
+            # Handle different return formats
+            if isinstance(res[0], (list, tuple)):
+                deg_total = res[0][0]
+                speed = res[0][3] if len(res[0]) > 3 else 0.0
+            else:
+                deg_total = res[0]
+                speed = res[3] if len(res) > 3 else 0.0
+            
+            planet_longitudes[p_name] = deg_total
+            planet_speeds[p_name] = speed
+        
+        # Add Ketu (180° from Rahu)
+        planet_longitudes['Ketu'] = (planet_longitudes['Rahu'] + 180) % 360
+        planet_speeds['Ketu'] = planet_speeds['Rahu']
+        
+        # 3. Build each divisional chart
+        charts_out = {}
+        
+        for chart_name in target_charts:
+            if chart_name not in all_charts:
+                continue
+                
+            harmonic = int(chart_name[1:]) if chart_name.startswith('D') else 1
+            
+            # Calculate Varga Ascendant
+            if harmonic == 1:
+                varga_asc_sign = signs[int(d1_asc_total / 30) + 1]
+                varga_asc_sign_idx = int(d1_asc_total / 30) + 1
+                varga_asc_deg = d1_asc_total % 30
+            else:
+                varga_asc_sign, varga_asc_sign_idx, varga_asc_deg = self._calculate_varga_ascendant(d1_asc_total, harmonic)
+            
+            # Build planet data for this chart
+            planets_data = {}
+            for p_name, p_long in planet_longitudes.items():
+                if harmonic == 1:
+                    p_sign = signs[int(p_long / 30) + 1]
+                    p_sign_idx = int(p_long / 30) + 1
+                    p_deg = p_long % 30
+                else:
+                    p_sign, p_sign_idx, p_deg = self._get_planet_varga_sign(p_long, harmonic)
+                
+                # Calculate house (from varga ascendant)
+                house = ((p_sign_idx - varga_asc_sign_idx) % 12) + 1
+                
+                planet_entry = {
+                    "sign": p_sign,
+                    "house": house,
+                    "degree": p_deg,
+                    "retrograde": planet_speeds[p_name] < 0
+                }
+                
+                # Add extra data for D1
+                if harmonic == 1:
+                    planet_entry["total_degree"] = p_long
+                    planet_entry["speed"] = planet_speeds[p_name]
+                    planet_entry["nakshatra"] = self._get_nakshatra_name(p_long)
+                    planet_entry["pada"] = self._get_nakshatra_pada(p_long)
+                else:
+                    planet_entry["nakshatra"] = None
+                    planet_entry["pada"] = None
+                
+                planets_data[p_name] = planet_entry
+            
+            # Build houses data
+            houses_data = []
+            for i in range(1, 13):
+                h_sign_idx = ((varga_asc_sign_idx - 1 + i - 1) % 12) + 1
+                h_sign = signs[h_sign_idx]
+                
+                # Find occupants
+                occupants = [p for p, data in planets_data.items() if data['house'] == i]
+                
+                house_entry = {
+                    "house": i,
+                    "sign": h_sign,
+                    "lord": self._get_sign_lord(h_sign_idx),
+                    "occupants": occupants
+                }
+                
+                # Add cusps for D1
+                if harmonic == 1 and i <= len(cusps):
+                    house_entry["cusp"] = cusps[i-1] % 30
+                    house_entry["total_degree"] = cusps[i-1]
+                
+                houses_data.append(house_entry)
+            
+            # Compile chart
+            chart_data = {
+                "ascendant": {
+                    "sign": varga_asc_sign,
+                    "lord": self._get_sign_lord(varga_asc_sign_idx),
+                    "degree": varga_asc_deg
+                },
+                "planets": planets_data,
+                "houses": houses_data
+            }
+            
+            # Extra D1 data
+            if harmonic == 1:
+                chart_data["ascendant"]["total_degree"] = d1_asc_total
+            
+            charts_out[chart_name] = chart_data
+        
+        return charts_out
+
+    def _get_nakshatra_name(self, total_degree: float) -> str:
+        """Get nakshatra name from total sidereal degree"""
+        nakshatras = [
+            "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
+            "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni",
+            "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
+            "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha",
+            "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+        ]
+        nak_span = 360.0 / 27.0  # 13.333...
+        nak_idx = int(total_degree / nak_span) % 27
+        return nakshatras[nak_idx]
+
+    def _get_nakshatra_pada(self, total_degree: float) -> int:
+        """Get nakshatra pada (1-4) from total sidereal degree"""
+        nak_span = 360.0 / 27.0
+        deg_in_nak = total_degree % nak_span
+        pada_span = nak_span / 4.0
+        return int(deg_in_nak / pada_span) + 1
+
     def _format_chart_data(self, chart_obj, chart_name="D1", d1_degrees=None) -> Dict[str, Any]:
         """Format individual chart data"""
         try:
@@ -412,38 +740,15 @@ class AstroEngine:
             asc_sign_idx = int(asc_deg_total / 30)
             asc_deg_rem = asc_deg_total % 30
             
-            # Enrich D1 Ascendant
-            if 'D1' in output['divisional_charts']:
-                asc_node = output['divisional_charts']['D1']['ascendant']
-                asc_node['degree'] = asc_deg_rem
-                asc_node['total_degree'] = asc_deg_total
-            
-            # --- CRITICAL FIX: Recalculate Divisional Chart Ascendants ---
-            # Now that we have the correct sidereal D1 ascendant, recalculate all vargas
-            for chart_name in output['divisional_charts']:
-                if chart_name == 'D1':
-                    continue  # D1 already corrected above
+            # Note: Divisional chart ascendants are now calculated directly by
+            # _calculate_divisional_charts_swisseph() - no need to recalculate here
                 
-                # Extract harmonic number (e.g., D9 -> 9)
-                if chart_name.startswith('D') and chart_name[1:].isdigit():
-                    harmonic = int(chart_name[1:])
-                    if harmonic > 1:
-                        varga_sign, varga_sign_idx, varga_deg = self._calculate_varga_ascendant(asc_deg_total, harmonic)
-                        varga_asc = output['divisional_charts'][chart_name]['ascendant']
-                        varga_asc['sign'] = varga_sign
-                        varga_asc['lord'] = self._get_sign_lord(varga_sign_idx)
-                        varga_asc['degree'] = varga_deg
-                
-            # 2. Enrich Houses with Cusps
-            if 'houses' in output['divisional_charts']['D1']:
+            # 2. Enrich Houses with Cusps (additonal madhya calculations)
+            if 'D1' in output['divisional_charts'] and 'houses' in output['divisional_charts']['D1']:
                 for i, h_data in enumerate(output['divisional_charts']['D1']['houses']):
-                    # swe cusps are 1-based index in result usually, but tuple is 0-indexed?
-                    # swe.houses returns tuple of 12 numbers. cusps[0] is 1st house.
                     if i < len(cusps):
                         h_deg_total = cusps[i]
-                        h_data['cusp'] = h_deg_total % 30
-                        h_data['total_degree'] = h_deg_total
-                        # Calculate madhya (midpoint) roughly
+                        # Add madhya (midpoint) calculation
                         next_cusp = cusps[(i+1)%12]
                         if next_cusp < h_deg_total: next_cusp += 360
                         midpoint = (h_deg_total + next_cusp) / 2
