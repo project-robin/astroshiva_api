@@ -164,16 +164,30 @@ class AstroEngine:
                 "yogas": self._extract_yogas(chart),
                 "doshas": self._calculate_doshas(chart),
                 "meta": {
-                     "api_version": "2.1.0",
+                     "api_version": "2.2.0",
                      "calculation_method": "swisseph_parashara",
                      "ayanamsa": "Lahiri",
-                     "engine": "astro-shiva-engine-v2.1",
-                     "features": ["Jaimini", "KP", "Avasthas", "Transits", "Custom Varga Engine"]
+                     "engine": "astro-shiva-engine-v2.2",
+                     "features": ["Jaimini", "KP", "Avasthas", "Transits", "Custom Varga Engine", "Astronomical Details", "KP Cusps"]
                 }
             }
             
+            # Add Phase 1 enhancements: Astronomical Details, Sunrise/Sunset, KP Cusps
+            try:
+                output["astronomical_details"] = self._get_astronomical_constants(jd_ut, birth_datetime, tz_offset, longitude)
+                output["sunrise_sunset"] = self._calculate_sunrise_sunset(jd_ut, latitude, longitude)
+                
+                # Get house cusps for KP calculation (already calculated in swisseph block)
+                import swisseph as swe
+                swe.set_sid_mode(swe.SIDM_LAHIRI)
+                cusps, ascmc = swe.houses_ex(jd_ut, latitude, longitude, b'P', swe.FLG_SIDEREAL)
+                output["kp_cusps"] = self._calculate_kp_cusps(list(cusps))
+            except Exception as phase1_err:
+                output["meta"]["phase1_error"] = str(phase1_err)
+            
             # Enrich with additional calculations (KP, Avasthas, Transits, etc.)
             self._enrich_chart_data(output, birth_datetime, latitude, longitude, tz_offset)
+
             
             return output
             
@@ -1642,7 +1656,194 @@ class AstroEngine:
                 "status": "error",
                 "message": str(e)
             }
+    
+    def _get_astronomical_constants(self, jd_ut: float, birth_datetime: datetime, tz_offset: float, lon: float) -> Dict[str, Any]:
+        """
+        Calculate and return astronomical base values used in Vedic astrology.
+        
+        Args:
+            jd_ut: Julian Day in UT
+            birth_datetime: Birth datetime object
+            tz_offset: Timezone offset in hours
+            lon: Longitude for Local Mean Time calculation
+        
+        Returns:
+            Dictionary with Ayanamsa, Julian Day, Sidereal Time, Obliquity, LMT, GMT
+        """
+        try:
+            import swisseph as swe
+            
+            # 1. Ayanamsa (Lahiri)
+            swe.set_sid_mode(swe.SIDM_LAHIRI)
+            ayanamsa_deg = swe.get_ayanamsa_ut(jd_ut)
+            
+            # Convert to DMS
+            ayan_d = int(ayanamsa_deg)
+            ayan_m = int((ayanamsa_deg - ayan_d) * 60)
+            ayan_s = int(((ayanamsa_deg - ayan_d) * 60 - ayan_m) * 60)
+            
+            # 2. Obliquity of the Ecliptic
+            # swe.calc_ut returns eps (obliquity) when planet is SUN and flag includes SEFLG_EQUATORIAL
+            # Simpler: use swe.calc for mean obliquity
+            eps_tuple = swe.calc_ut(jd_ut, swe.ECL_NUT)
+            # eps_tuple[0] is true obliquity, eps_tuple[1] is mean obliquity
+            if isinstance(eps_tuple[0], (list, tuple)):
+                obliquity = eps_tuple[0][0]  # True obliquity
+            else:
+                obliquity = eps_tuple[0]
+            
+            obl_d = int(obliquity)
+            obl_m = int((obliquity - obl_d) * 60)
+            obl_s = int(((obliquity - obl_d) * 60 - obl_m) * 60)
+            
+            # 3. Sidereal Time at Birth
+            # ARMC (Ascendant's Right Ascension Meridian Cusp) / 15 gives sidereal time in hours
+            # Or use swe.sidtime(jd_ut) for GMT sidereal time, then adjust for longitude
+            sid_time_gmt = swe.sidtime(jd_ut)  # Returns hours
+            # Local Sidereal Time = GMT Sidereal Time + (Longitude / 15)
+            local_sid_time = (sid_time_gmt + lon / 15.0) % 24.0
+            
+            st_h = int(local_sid_time)
+            st_m = int((local_sid_time - st_h) * 60)
+            st_s = int(((local_sid_time - st_h) * 60 - st_m) * 60)
+            
+            # 4. LMT and GMT at Birth
+            # LMT = Local Standard Time + Time Correction
+            # Time Correction = (Longitude - Standard Meridian) / 15 hours
+            # For IST, Standard Meridian = 82.5° E
+            # However, we're given the local time directly, so:
+            local_time_str = birth_datetime.strftime("%H:%M:%S")
+            
+            # GMT = Local Time - Timezone Offset
+            gmt_hour = birth_datetime.hour - tz_offset
+            gmt_datetime = datetime(
+                birth_datetime.year, birth_datetime.month, birth_datetime.day,
+                int(gmt_hour) % 24, birth_datetime.minute, birth_datetime.second
+            )
+            gmt_str = gmt_datetime.strftime("%H:%M:%S")
+            
+            # LMT Correction = (Longitude - Standard Meridian) * 4 minutes per degree
+            # For India: Std Meridian = 82.5
+            # This is approximate, as it assumes IST zone
+            std_meridian = tz_offset * 15.0  # Approx standard meridian for this tz
+            lmt_correction_minutes = (lon - std_meridian) * 4.0
+            lmt_corr_m = int(abs(lmt_correction_minutes))
+            lmt_corr_s = int((abs(lmt_correction_minutes) - lmt_corr_m) * 60)
+            lmt_corr_sign = "+" if lmt_correction_minutes >= 0 else "-"
+            
+            return {
+                "ayanamsa": {
+                    "name": "Lahiri",
+                    "value_dms": f"{ayan_d:03d}-{ayan_m:02d}-{ayan_s:02d}",
+                    "value_decimal": round(ayanamsa_deg, 6)
+                },
+                "obliquity": {
+                    "value_dms": f"{obl_d:02d}-{obl_m:02d}-{obl_s:02d}",
+                    "value_decimal": round(obliquity, 6)
+                },
+                "sidereal_time": {
+                    "local_dms": f"{st_h:02d}:{st_m:02d}:{st_s:02d}",
+                    "local_decimal": round(local_sid_time, 4)
+                },
+                "julian_day": round(jd_ut, 6),
+                "lmt_at_birth": local_time_str,
+                "gmt_at_birth": gmt_str,
+                "local_time_correction": f"{lmt_corr_sign}{lmt_corr_m:02d}:{lmt_corr_s:02d}"
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
+    def _calculate_sunrise_sunset(self, jd_ut: float, lat: float, lon: float) -> Dict[str, Any]:
+        """
+        Calculate sunrise, sunset, and day duration for birth date.
+        
+        Args:
+            jd_ut: Julian Day in UT for midnight of birth date
+            lat: Latitude
+            lon: Longitude
+        
+        Returns:
+            Dictionary with sunrise, sunset, day_duration
+        """
+        try:
+            import swisseph as swe
+            
+            # swe.rise_trans calculates rise/set times
+            # We need JD at 0h (midnight) for the birth day
+            jd_midnight = int(jd_ut - 0.5) + 0.5  # Floor to midnight UT
+            
+            # Sunrise (SE_CALC_RISE | SE_BIT_DISC_CENTER for center of disc)
+            result_rise = swe.rise_trans(
+                jd_midnight, swe.SUN, None, 
+                swe.FLG_SWIEPH, swe.CALC_RISE | swe.BIT_DISC_CENTER,
+                (lon, lat, 0)  # geopos: (lon, lat, altitude)
+            )
+            
+            # Sunset
+            result_set = swe.rise_trans(
+                jd_midnight, swe.SUN, None,
+                swe.FLG_SWIEPH, swe.CALC_SET | swe.BIT_DISC_CENTER,
+                (lon, lat, 0)
+            )
+            
+            # result is (return_code, jd_event)
+            # jd_event is the Julian Day of the event
+            sunrise_jd = result_rise[1][0] if isinstance(result_rise[1], (list, tuple)) else result_rise[1]
+            sunset_jd = result_set[1][0] if isinstance(result_set[1], (list, tuple)) else result_set[1]
+            
+            # Convert JD to time string (local time would need tz adjustment)
+            # For simplicity, we'll return UT times and let frontend convert
+            def jd_to_time_str(jd):
+                # Fractional day
+                frac = (jd % 1.0) * 24.0
+                h = int(frac)
+                m = int((frac - h) * 60)
+                s = int(((frac - h) * 60 - m) * 60)
+                return f"{h:02d}:{m:02d}:{s:02d}"
+            
+            sunrise_ut = jd_to_time_str(sunrise_jd)
+            sunset_ut = jd_to_time_str(sunset_jd)
+            
+            # Day duration in hours
+            day_duration_hours = (sunset_jd - sunrise_jd) * 24.0
+            dur_h = int(day_duration_hours)
+            dur_m = int((day_duration_hours - dur_h) * 60)
+            dur_s = int(((day_duration_hours - dur_h) * 60 - dur_m) * 60)
+            
+            return {
+                "sunrise_ut": sunrise_ut,
+                "sunset_ut": sunset_ut,
+                "day_duration": f"{dur_h:02d}:{dur_m:02d}:{dur_s:02d}",
+                "day_duration_hours": round(day_duration_hours, 4)
+            }
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def _calculate_kp_cusps(self, cusps: list) -> Dict[str, Any]:
+        """
+        Calculate KP Star/Sub/Sub-Sub lords for all 12 house cusps.
+        
+        Args:
+            cusps: List of 12 cusp degrees (sidereal, 0-360)
+        
+        Returns:
+            Dictionary with KP details for each cusp
+        """
+        kp_cusps = {}
+        
+        for i, cusp_deg in enumerate(cusps[:12], 1):
+            # Use existing _calculate_kp_details method
+            kp_info = self._calculate_kp_details(cusp_deg)
+            kp_cusps[f"cusp_{i}"] = {
+                "degree": round(cusp_deg % 30, 4),
+                "total_degree": round(cusp_deg, 4),
+                "sign_lord": kp_info.get("sign_lord"),
+                "nakshatra_lord": kp_info.get("nakshatra_lord"),
+                "sub_lord": kp_info.get("sub_lord"),
+                "sub_sub_lord": kp_info.get("sub_sub_lord")
+            }
+        
+        return kp_cusps
 
 
 def test_engine():
