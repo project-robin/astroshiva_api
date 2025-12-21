@@ -329,10 +329,10 @@ class AstroEngine:
             # Set Ayanamsa
             swe.set_sid_mode(swe.SIDM_LAHIRI)
             
-            # 1. Exact Ascendant Degree
-            # swe.houses returns (cusps, ascmc)
-            # ascmc[0] is Ascendant
-            cusps, ascmc = swe.houses(jd_ut, lat, lon, b'P') # Placidus houses
+            # 1. Exact Ascendant Degree (SIDEREAL/Vedic)
+            # CRITICAL: Use houses_ex with FLG_SIDEREAL for Vedic calculations
+            # swe.houses() returns TROPICAL, swe.houses_ex() with sidereal flag returns SIDEREAL
+            cusps, ascmc = swe.houses_ex(jd_ut, lat, lon, b'P', swe.FLG_SIDEREAL) # Placidus + Sidereal
             
             asc_deg_total = ascmc[0]
             asc_sign_idx = int(asc_deg_total / 30)

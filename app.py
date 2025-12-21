@@ -376,7 +376,9 @@ async def verify_calculations():
             for code, name in house_systems.items():
                 try:
                     swe.set_sid_mode(swe.SIDM_LAHIRI)
-                    cusps, ascmc = swe.houses(jd, coord_vals["lat"], coord_vals["lon"], bytes(code, 'utf-8'))
+                    # FIXED: Use houses_ex with FLG_SIDEREAL for sidereal (Vedic) calculations
+                    # swe.houses() returns tropical, houses_ex with sidereal flag returns sidereal
+                    cusps, ascmc = swe.houses_ex(jd, coord_vals["lat"], coord_vals["lon"], bytes(code, 'utf-8'), swe.FLG_SIDEREAL)
                     lagna_total = ascmc[0]
                     sign_idx = int(lagna_total / 30)
                     sign_deg = lagna_total % 30
@@ -401,7 +403,8 @@ async def verify_calculations():
         for coord_name, coord_vals in coords.items():
             try:
                 swe.set_sid_mode(swe.SIDM_LAHIRI)
-                cusps, ascmc = swe.houses(jd, coord_vals["lat"], coord_vals["lon"], b'P')
+                # FIXED: Use houses_ex for sidereal calculation
+                cusps, ascmc = swe.houses_ex(jd, coord_vals["lat"], coord_vals["lon"], b'P', swe.FLG_SIDEREAL)
                 lagna_total = ascmc[0]
                 d9_sign = calculate_navamsa_sign(lagna_total)
                 verification["our_calculation"][f"d9_lagna_{coord_name}"] = d9_sign
