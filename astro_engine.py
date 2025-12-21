@@ -227,6 +227,80 @@ class AstroEngine:
         
         return varga_degree
 
+    def _calculate_varga_ascendant(self, d1_asc_total_degree: float, harmonic: int) -> tuple:
+        """
+        Calculate the ascendant sign for a divisional chart (Varga) using Parashara rules.
+        
+        Args:
+            d1_asc_total_degree: D1 Lagna total degree (0-360, sidereal)
+            harmonic: The divisor (e.g., 9 for D9 Navamsa, 2 for D2 Hora, etc.)
+        
+        Returns:
+            Tuple of (sign_name, sign_index_1based, degree_in_sign)
+        """
+        signs = ["", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", 
+                 "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
+        
+        # D1 sign (1-based)
+        d1_sign = int(d1_asc_total_degree / 30) + 1
+        d1_deg_in_sign = d1_asc_total_degree % 30
+        
+        # Division span within each sign
+        division_span = 30.0 / harmonic
+        
+        # Which division (0-indexed) within the D1 sign does the Lagna fall?
+        division_index = int(d1_deg_in_sign / division_span)
+        
+        # Calculate degree within the varga sign
+        varga_degree = ((d1_deg_in_sign % division_span) / division_span) * 30.0
+        
+        # Default: Simple harmonic (used for most charts like D2, D3, D4, D7, D10, D12, etc.)
+        # The varga sign is calculated by adding the division index to a start sign
+        
+        if harmonic == 9:  # D9 Navamsa - special rules
+            # Navamsa starting signs based on D1 sign's element:
+            # Fire (Aries=1, Leo=5, Sag=9): Start from Aries
+            # Earth (Taurus=2, Virgo=6, Cap=10): Start from Capricorn  
+            # Air (Gemini=3, Libra=7, Aqua=11): Start from Libra
+            # Water (Cancer=4, Scorpio=8, Pisces=12): Start from Cancer
+            
+            if d1_sign in [1, 5, 9]:  # Fire signs
+                start_sign = 1  # Aries
+            elif d1_sign in [2, 6, 10]:  # Earth signs
+                start_sign = 10  # Capricorn
+            elif d1_sign in [3, 7, 11]:  # Air signs
+                start_sign = 7  # Libra
+            else:  # Water signs [4, 8, 12]
+                start_sign = 4  # Cancer
+            
+            varga_sign = ((start_sign - 1) + division_index) % 12 + 1
+            
+        elif harmonic == 2:  # D2 Hora
+            # Sun's Hora (Leo) for odd signs, Moon's Hora (Cancer) for even
+            if d1_sign % 2 == 1:  # Odd sign
+                varga_sign = 5 if division_index == 0 else 4  # Leo then Cancer
+            else:  # Even sign
+                varga_sign = 4 if division_index == 0 else 5  # Cancer then Leo
+                
+        elif harmonic == 3:  # D3 Drekkana
+            # Each sign divided into 3 parts of 10 degrees
+            # 1st Drekkana: Same sign, 2nd: 5th from it, 3rd: 9th from it
+            if division_index == 0:
+                varga_sign = d1_sign
+            elif division_index == 1:
+                varga_sign = ((d1_sign - 1 + 4) % 12) + 1  # 5th sign
+            else:
+                varga_sign = ((d1_sign - 1 + 8) % 12) + 1  # 9th sign
+                
+        else:
+            # Generic calculation for other harmonics (D4, D7, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60)
+            # Formula: ((d1_sign - 1) * harmonic + division_index) % 12 + 1
+            varga_sign = ((d1_sign - 1) * harmonic + division_index) % 12 + 1
+        
+        sign_name = signs[varga_sign] if 1 <= varga_sign <= 12 else "Unknown"
+        
+        return (sign_name, varga_sign, varga_degree)
+
     def _format_chart_data(self, chart_obj, chart_name="D1", d1_degrees=None) -> Dict[str, Any]:
         """Format individual chart data"""
         try:
@@ -343,6 +417,22 @@ class AstroEngine:
                 asc_node = output['divisional_charts']['D1']['ascendant']
                 asc_node['degree'] = asc_deg_rem
                 asc_node['total_degree'] = asc_deg_total
+            
+            # --- CRITICAL FIX: Recalculate Divisional Chart Ascendants ---
+            # Now that we have the correct sidereal D1 ascendant, recalculate all vargas
+            for chart_name in output['divisional_charts']:
+                if chart_name == 'D1':
+                    continue  # D1 already corrected above
+                
+                # Extract harmonic number (e.g., D9 -> 9)
+                if chart_name.startswith('D') and chart_name[1:].isdigit():
+                    harmonic = int(chart_name[1:])
+                    if harmonic > 1:
+                        varga_sign, varga_sign_idx, varga_deg = self._calculate_varga_ascendant(asc_deg_total, harmonic)
+                        varga_asc = output['divisional_charts'][chart_name]['ascendant']
+                        varga_asc['sign'] = varga_sign
+                        varga_asc['lord'] = self._get_sign_lord(varga_sign_idx)
+                        varga_asc['degree'] = varga_deg
                 
             # 2. Enrich Houses with Cusps
             if 'houses' in output['divisional_charts']['D1']:
