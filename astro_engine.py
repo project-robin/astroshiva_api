@@ -389,6 +389,9 @@ class AstroEngine:
                         speed = res[3] if len(res) > 3 else 0.0
                     
                     # Normalize degree
+                    if p_name == 'Ketu':
+                        deg_total = (deg_total + 180.0) % 360.0
+                    
                     deg_norm = deg_total % 30
                     sign_idx = int(deg_total / 30) + 1 # 1-based
                     
