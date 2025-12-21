@@ -164,18 +164,19 @@ class AstroEngine:
                 "yogas": self._extract_yogas(chart),
                 "doshas": self._calculate_doshas(chart),
                 "meta": {
-                     "api_version": "2.2.0",
+                     "api_version": "2.3.0",
                      "calculation_method": "swisseph_parashara",
                      "ayanamsa": "Lahiri",
-                     "engine": "astro-shiva-engine-v2.2",
-                     "features": ["Jaimini", "KP", "Avasthas", "Transits", "Custom Varga Engine", "Astronomical Details", "KP Cusps"]
+                     "engine": "astro-shiva-engine-v2.3",
+                     "features": ["Jaimini", "KP", "Avasthas", "Transits", "Custom Varga Engine", 
+                                  "Astronomical Details", "KP Cusps", "Yogini Dasha", "Char Dasha", "Bhavabala"]
                 }
             }
             
             # Add Phase 1 enhancements: Astronomical Details, Sunrise/Sunset, KP Cusps
             try:
                 output["astronomical_details"] = self._get_astronomical_constants(jd_ut, birth_datetime, tz_offset, longitude)
-                output["sunrise_sunset"] = self._calculate_sunrise_sunset(jd_ut, latitude, longitude)
+                output["sunrise_sunset"] = self._calculate_sunrise_sunset(jd_ut, latitude, longitude, tz_offset)
                 
                 # Get house cusps for KP calculation (already calculated in swisseph block)
                 import swisseph as swe
@@ -184,6 +185,37 @@ class AstroEngine:
                 output["kp_cusps"] = self._calculate_kp_cusps(list(cusps))
             except Exception as phase1_err:
                 output["meta"]["phase1_error"] = str(phase1_err)
+            
+            # Add Phase 2 enhancements: Bhavabala, Yogini Dasha, Char Dasha
+            try:
+                # Extract Bhavabala from raw chart data
+                if hasattr(chart, 'd1_chart') or isinstance(chart, dict):
+                    raw_chart = chart if isinstance(chart, dict) else getattr(chart, '_raw_data', {})
+                    output["bhavabala"] = self._extract_bhavabala(raw_chart)
+                
+                # Get Moon degree for Yogini Dasha
+                moon_degree = None
+                if "divisional_charts" in output and "D1" in output["divisional_charts"]:
+                    moon_data = output["divisional_charts"]["D1"].get("planets", {}).get("Moon", {})
+                    moon_degree = moon_data.get("longitude") or moon_data.get("full_degree")
+                
+                # Calculate Yogini Dasha
+                output["yogini_dasha"] = self._calculate_yogini_dasha(birth_datetime, moon_degree=moon_degree)
+                
+                # Get Lagna sign for Char Dasha
+                lagna_sign_idx = 0
+                if "divisional_charts" in output and "D1" in output["divisional_charts"]:
+                    lagna_sign = output["divisional_charts"]["D1"].get("ascendant", {}).get("sign", "Aries")
+                    signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+                             "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
+                    if lagna_sign in signs:
+                        lagna_sign_idx = signs.index(lagna_sign)
+                
+                # Calculate Char Dasha
+                output["char_dasha"] = self._calculate_char_dasha(birth_datetime, lagna_sign_idx)
+                
+            except Exception as phase2_err:
+                output["meta"]["phase2_error"] = str(phase2_err)
             
             # Enrich with additional calculations (KP, Avasthas, Transits, etc.)
             self._enrich_chart_data(output, birth_datetime, latitude, longitude, tz_offset)
@@ -1753,14 +1785,15 @@ class AstroEngine:
         except Exception as e:
             return {"error": str(e)}
 
-    def _calculate_sunrise_sunset(self, jd_ut: float, lat: float, lon: float) -> Dict[str, Any]:
+    def _calculate_sunrise_sunset(self, jd_ut: float, lat: float, lon: float, tz_offset: float = 5.5) -> Dict[str, Any]:
         """
         Calculate sunrise, sunset, and day duration for birth date.
         
         Args:
-            jd_ut: Julian Day in UT for midnight of birth date
+            jd_ut: Julian Day in UT for birth time
             lat: Latitude
             lon: Longitude
+            tz_offset: Timezone offset (default 5.5 for IST)
         
         Returns:
             Dictionary with sunrise, sunset, day_duration
@@ -1768,54 +1801,385 @@ class AstroEngine:
         try:
             import swisseph as swe
             
-            # swe.rise_trans calculates rise/set times
-            # We need JD at 0h (midnight) for the birth day
-            jd_midnight = int(jd_ut - 0.5) + 0.5  # Floor to midnight UT
+            # Calculate JD at 0h UT (midnight) for the birth day
+            # jd_ut is for birth time, we need midnight of that day
+            jd_midnight = int(jd_ut) + 0.5  # Julian Day starts at noon, so +0.5 gives midnight
+            if jd_ut % 1 < 0.5:
+                jd_midnight = int(jd_ut) - 0.5  # If before noon, go back a day for midnight
             
-            # Sunrise (SE_CALC_RISE | SE_BIT_DISC_CENTER for center of disc)
-            result_rise = swe.rise_trans(
-                jd_midnight, swe.SUN, None, 
-                swe.FLG_SWIEPH, swe.CALC_RISE | swe.BIT_DISC_CENTER,
-                (lon, lat, 0)  # geopos: (lon, lat, altitude)
-            )
+            # Geographic position as tuple: (longitude, latitude, altitude)
+            geopos = (lon, lat, 0.0)
             
-            # Sunset
-            result_set = swe.rise_trans(
-                jd_midnight, swe.SUN, None,
-                swe.FLG_SWIEPH, swe.CALC_SET | swe.BIT_DISC_CENTER,
-                (lon, lat, 0)
-            )
+            # Calculate sunrise using swe.rise_trans
+            # rsmi = rising/setting/meridian indicator: 1 = rise, 2 = set
+            # Return is (return_flag, tret) where tret is Julian Day of event
+            try:
+                ret_rise, tret_rise = swe.rise_trans(
+                    jd_midnight,       # Julian Day
+                    swe.SUN,           # Planet
+                    "",                # Star name (empty for planets)
+                    swe.FLG_SWIEPH,    # Ephemeris flag
+                    1,                 # rsmi: 1 = CALC_RISE
+                    geopos,            # Geographic position
+                    0.0,               # Atmospheric pressure (default)
+                    0.0                # Atmospheric temperature (default)
+                )
+                
+                ret_set, tret_set = swe.rise_trans(
+                    jd_midnight,
+                    swe.SUN,
+                    "",
+                    swe.FLG_SWIEPH,
+                    2,                 # rsmi: 2 = CALC_SET
+                    geopos,
+                    0.0,
+                    0.0
+                )
+            except TypeError:
+                # Fallback for different swisseph versions
+                ret_rise = swe.rise_trans(
+                    jd_midnight, swe.SUN, None,
+                    swe.FLG_SWIEPH, 1,
+                    geopos
+                )
+                ret_set = swe.rise_trans(
+                    jd_midnight, swe.SUN, None,
+                    swe.FLG_SWIEPH, 2,
+                    geopos
+                )
+                # Extract JD from result
+                if isinstance(ret_rise, tuple):
+                    tret_rise = ret_rise[1][0] if isinstance(ret_rise[1], (list, tuple)) else ret_rise[1]
+                else:
+                    tret_rise = ret_rise
+                if isinstance(ret_set, tuple):
+                    tret_set = ret_set[1][0] if isinstance(ret_set[1], (list, tuple)) else ret_set[1]
+                else:
+                    tret_set = ret_set
             
-            # result is (return_code, jd_event)
-            # jd_event is the Julian Day of the event
-            sunrise_jd = result_rise[1][0] if isinstance(result_rise[1], (list, tuple)) else result_rise[1]
-            sunset_jd = result_set[1][0] if isinstance(result_set[1], (list, tuple)) else result_set[1]
+            # Extract JD values from results
+            if isinstance(tret_rise, (list, tuple)):
+                sunrise_jd = tret_rise[0]
+            else:
+                sunrise_jd = tret_rise
+                
+            if isinstance(tret_set, (list, tuple)):
+                sunset_jd = tret_set[0]
+            else:
+                sunset_jd = tret_set
             
-            # Convert JD to time string (local time would need tz adjustment)
-            # For simplicity, we'll return UT times and let frontend convert
-            def jd_to_time_str(jd):
-                # Fractional day
-                frac = (jd % 1.0) * 24.0
-                h = int(frac)
-                m = int((frac - h) * 60)
-                s = int(((frac - h) * 60 - m) * 60)
+            # Validate results
+            if sunrise_jd is None or sunset_jd is None:
+                return {"error": "Could not calculate sunrise/sunset for this location"}
+            
+            # Convert JD to local time string
+            def jd_to_local_time_str(jd, tz):
+                """Convert JD (UT) to local time string"""
+                # Fractional day in UT
+                frac_ut = (jd % 1.0) * 24.0
+                # Add timezone offset
+                frac_local = frac_ut + tz
+                if frac_local >= 24:
+                    frac_local -= 24
+                elif frac_local < 0:
+                    frac_local += 24
+                h = int(frac_local)
+                m = int((frac_local - h) * 60)
+                s = int(((frac_local - h) * 60 - m) * 60)
                 return f"{h:02d}:{m:02d}:{s:02d}"
             
-            sunrise_ut = jd_to_time_str(sunrise_jd)
-            sunset_ut = jd_to_time_str(sunset_jd)
+            sunrise_local = jd_to_local_time_str(sunrise_jd, tz_offset)
+            sunset_local = jd_to_local_time_str(sunset_jd, tz_offset)
             
             # Day duration in hours
             day_duration_hours = (sunset_jd - sunrise_jd) * 24.0
+            if day_duration_hours < 0:
+                day_duration_hours += 24.0  # Handle day boundary
             dur_h = int(day_duration_hours)
             dur_m = int((day_duration_hours - dur_h) * 60)
             dur_s = int(((day_duration_hours - dur_h) * 60 - dur_m) * 60)
             
             return {
-                "sunrise_ut": sunrise_ut,
-                "sunset_ut": sunset_ut,
+                "sunrise": sunrise_local,
+                "sunset": sunset_local,
                 "day_duration": f"{dur_h:02d}:{dur_m:02d}:{dur_s:02d}",
                 "day_duration_hours": round(day_duration_hours, 4)
             }
+        except Exception as e:
+            import traceback
+            return {"error": str(e), "traceback": traceback.format_exc()}
+
+    
+    # ============================================================
+    # PHASE 2: Bhavabala, Yogini Dasha, Char Dasha
+    # ============================================================
+    
+    def _extract_bhavabala(self, chart_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract Bhavabala (House Strength) from chart data.
+        Bhavabala = BhavaAdhipathibala + BhavaDigbala + BhavaDrishtibala
+        
+        Returns:
+            Dictionary with Bhavabala for each of 12 houses
+        """
+        try:
+            bhavabala = {}
+            balas = chart_data.get("Balas", {})
+            bhava_data = balas.get("BhavaBala", {})
+            
+            if bhava_data:
+                totals = bhava_data.get("Total", [0]*12)
+                adhipathi = bhava_data.get("BhavaAdhipathibala", [0]*12)
+                digbala = bhava_data.get("BhavaDigbala", [0]*12)
+                drishtibala = bhava_data.get("BhavaDrishtibala", [0]*12)
+                
+                for i in range(12):
+                    bhavabala[f"house_{i+1}"] = {
+                        "total": round(totals[i] if i < len(totals) else 0, 2),
+                        "adhipathi_bala": round(adhipathi[i] if i < len(adhipathi) else 0, 2),
+                        "dig_bala": round(digbala[i] if i < len(digbala) else 0, 2),
+                        "drishti_bala": round(drishtibala[i] if i < len(drishtibala) else 0, 2)
+                    }
+                
+                # Calculate rankings
+                if totals:
+                    sorted_houses = sorted(range(12), key=lambda x: totals[x] if x < len(totals) else 0, reverse=True)
+                    for rank, house_idx in enumerate(sorted_houses, 1):
+                        bhavabala[f"house_{house_idx+1}"]["rank"] = rank
+            
+            return bhavabala
+            
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def _calculate_yogini_dasha(self, birth_datetime: datetime, moon_nakshatra_idx: int = None, moon_degree: float = None) -> Dict[str, Any]:
+        """
+        Calculate Yogini Dasha periods.
+        Yogini Dasha has 8 periods totaling 36 years, then repeats.
+        Based on Moon's Nakshatra at birth.
+        
+        Yogini sequence: Mangala(1), Pingala(2), Dhanya(3), Bhramari(4), 
+                         Bhadrika(5), Ulka(6), Siddha(7), Sankata(8)
+        Planet rulers: Moon, Sun, Jupiter, Mars, Mercury, Saturn, Venus, Rahu
+        
+        Args:
+            birth_datetime: Birth date and time
+            moon_nakshatra_idx: Index of Moon's Nakshatra (0-26), optional
+            moon_degree: Moon's longitude in degrees, can be used to calculate nakshatra
+            
+        Returns:
+            Dictionary with Yogini Dasha periods
+        """
+        try:
+            from datetime import timedelta
+            
+            # Yogini definitions
+            yoginis = [
+                {"name": "Mangala", "abbrev": "Ma", "years": 1, "planet": "Moon"},
+                {"name": "Pingala", "abbrev": "Pi", "years": 2, "planet": "Sun"},
+                {"name": "Dhanya", "abbrev": "Dh", "years": 3, "planet": "Jupiter"},
+                {"name": "Bhramari", "abbrev": "Br", "years": 4, "planet": "Mars"},
+                {"name": "Bhadrika", "abbrev": "Ba", "years": 5, "planet": "Mercury"},
+                {"name": "Ulka", "abbrev": "Ul", "years": 6, "planet": "Saturn"},
+                {"name": "Siddha", "abbrev": "Si", "years": 7, "planet": "Venus"},
+                {"name": "Sankata", "abbrev": "Sn", "years": 8, "planet": "Rahu"}
+            ]
+            
+            total_cycle_years = 36  # Sum of all Yogini years
+            
+            # Calculate Moon's Nakshatra if not provided
+            if moon_nakshatra_idx is None and moon_degree is not None:
+                moon_nakshatra_idx = int(moon_degree / (360 / 27))  # 27 Nakshatras
+            elif moon_nakshatra_idx is None:
+                # Default: assume Ashwini if not provided
+                moon_nakshatra_idx = 0
+            
+            # Find starting Yogini based on Nakshatra
+            # Formula: (Nakshatra + 3) % 8 gives starting Yogini
+            starting_yogini_idx = (moon_nakshatra_idx + 3) % 8
+            
+            # Calculate balance of first dasha
+            # Based on Moon's position within the Nakshatra
+            nakshatra_span = 360 / 27  # 13.333... degrees
+            position_in_nakshatra = (moon_degree % nakshatra_span) if moon_degree else 0
+            balance_ratio = 1 - (position_in_nakshatra / nakshatra_span)
+            
+            # Build Yogini Dasha periods
+            dasha_periods = []
+            current_date = birth_datetime
+            
+            # Generate multiple cycles (at least 100 years)
+            for cycle in range(4):  # 4 cycles = 144 years
+                for i in range(8):
+                    yogini_idx = (starting_yogini_idx + i) % 8
+                    yogini = yoginis[yogini_idx]
+                    
+                    if cycle == 0 and i == 0:
+                        # First period uses balance
+                        years = yogini["years"] * balance_ratio
+                    else:
+                        years = yogini["years"]
+                    
+                    period_days = years * 365.25
+                    end_date = current_date + timedelta(days=period_days)
+                    
+                    dasha_periods.append({
+                        "yogini": yogini["name"],
+                        "abbrev": yogini["abbrev"],
+                        "planet": yogini["planet"],
+                        "years": round(years, 2),
+                        "start": current_date.strftime("%Y-%m-%d"),
+                        "end": end_date.strftime("%Y-%m-%d")
+                    })
+                    
+                    current_date = end_date
+            
+            # Find current period
+            now = datetime.now()
+            current_dasha = None
+            for period in dasha_periods:
+                start = datetime.strptime(period["start"], "%Y-%m-%d")
+                end = datetime.strptime(period["end"], "%Y-%m-%d")
+                if start <= now <= end:
+                    current_dasha = period
+                    break
+            
+            return {
+                "periods": dasha_periods,
+                "current": current_dasha,
+                "total_cycle_years": total_cycle_years,
+                "starting_yogini": yoginis[starting_yogini_idx]["name"]
+            }
+            
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def _calculate_char_dasha(self, birth_datetime: datetime, lagna_sign_idx: int = 0) -> Dict[str, Any]:
+        """
+        Calculate Char Dasha (Jaimini Chara Dasha).
+        Sign-based dasha system where each sign rules for a duration
+        based on its position from its lord.
+        
+        Args:
+            birth_datetime: Birth date and time
+            lagna_sign_idx: Index of Lagna sign (0=Aries to 11=Pisces)
+            
+        Returns:
+            Dictionary with Char Dasha periods
+        """
+        try:
+            from datetime import timedelta
+            
+            # Sign definitions
+            signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+                     "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
+            sign_abbrev = ["ARI", "TAU", "GEM", "CAN", "LEO", "VIR",
+                           "LIB", "SCO", "SAG", "CAP", "AQU", "PIS"]
+            
+            # Sign lords (traditional)
+            sign_lords = ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury",
+                          "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"]
+            
+            # Dual/Mutable signs: Gemini(2), Virgo(5), Sagittarius(8), Pisces(11)
+            dual_signs = [2, 5, 8, 11]
+            
+            # Odd signs (count forward): Aries, Gemini, Leo, Libra, Sagittarius, Aquarius
+            # Even signs (count backward): Taurus, Cancer, Virgo, Scorpio, Capricorn, Pisces
+            odd_signs = [0, 2, 4, 6, 8, 10]
+            
+            def get_dasha_duration(sign_idx: int) -> int:
+                """
+                Calculate dasha duration for a sign.
+                For odd signs: count from sign to its lord's sign (forward)
+                For even signs: count from sign to its lord's sign (backward)
+                Max is 12, min is 1
+                """
+                lord = sign_lords[sign_idx]
+                
+                # Find lord's sign(s)
+                lord_signs = [i for i, l in enumerate(sign_lords) if l == lord]
+                
+                # Use the first/primary sign of the lord
+                lord_sign = lord_signs[0] if lord_signs else sign_idx
+                
+                if sign_idx in odd_signs:
+                    # Count forward
+                    distance = (lord_sign - sign_idx) % 12
+                else:
+                    # Count backward
+                    distance = (sign_idx - lord_sign) % 12
+                
+                return distance + 1 if distance > 0 else 1
+            
+            def get_dasha_sequence(lagna_idx: int) -> list:
+                """
+                Get the sequence of signs for Char Dasha.
+                Starts from Lagna, direction based on odd/even and kendras/panaparas/apoklimas
+                """
+                sequence = []
+                
+                # If Lagna is odd sign, go forward through odd signs then backward through even
+                # If Lagna is even sign, start differently
+                # Simplified: Start from Lagna, alternate forward/backward
+                
+                if lagna_idx in odd_signs:
+                    # Start with Lagna, then go to 7th, then back to 2nd, etc.
+                    # Standard odd sign sequence: 1,7,2,8,3,9,4,10,5,11,6,12
+                    for offset in [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11]:
+                        sequence.append((lagna_idx + offset) % 12)
+                else:
+                    # Even sign sequence: 1,7,12,6,11,5,10,4,9,3,8,2
+                    for offset in [0, 6, 11, 5, 10, 4, 9, 3, 8, 2, 7, 1]:
+                        sequence.append((lagna_idx + offset) % 12)
+                
+                return sequence
+            
+            # Build Char Dasha periods
+            dasha_periods = []
+            current_date = birth_datetime
+            
+            sequence = get_dasha_sequence(lagna_sign_idx)
+            
+            # Calculate multiple cycles (typically need 2-3)
+            for cycle in range(3):
+                for sign_idx in sequence:
+                    duration = get_dasha_duration(sign_idx)
+                    
+                    period_days = duration * 365.25
+                    end_date = current_date + timedelta(days=period_days)
+                    
+                    dasha_periods.append({
+                        "sign": signs[sign_idx],
+                        "abbrev": sign_abbrev[sign_idx],
+                        "lord": sign_lords[sign_idx],
+                        "years": duration,
+                        "start": current_date.strftime("%d/%m/%y"),
+                        "end": end_date.strftime("%d/%m/%y")
+                    })
+                    
+                    current_date = end_date
+            
+            # Find current period
+            now = datetime.now()
+            current_dasha = None
+            for period in dasha_periods:
+                start = datetime.strptime(period["start"], "%d/%m/%y")
+                end = datetime.strptime(period["end"], "%d/%m/%y")
+                # Adjust for 2-digit year
+                if start.year < 1950:
+                    start = start.replace(year=start.year + 100)
+                if end.year < 1950:
+                    end = end.replace(year=end.year + 100)
+                if start <= now <= end:
+                    current_dasha = period
+                    break
+            
+            return {
+                "maha_dasha": dasha_periods,
+                "current": current_dasha,
+                "lagna_sign": signs[lagna_sign_idx]
+            }
+            
         except Exception as e:
             return {"error": str(e)}
     
