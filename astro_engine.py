@@ -203,7 +203,8 @@ class AstroEngine:
                 moon_degree = None
                 if "divisional_charts" in output and "D1" in output["divisional_charts"]:
                     moon_data = output["divisional_charts"]["D1"].get("planets", {}).get("Moon", {})
-                    moon_degree = moon_data.get("longitude") or moon_data.get("full_degree")
+                    # FIX: Use total_degree which is the actual key from SwissEph calculation
+                    moon_degree = moon_data.get("total_degree") or moon_data.get("longitude") or moon_data.get("full_degree")
                 
                 # Calculate Yogini Dasha
                 output["yogini_dasha"] = self._calculate_yogini_dasha(birth_datetime, moon_degree=moon_degree)
@@ -1862,16 +1863,20 @@ class AstroEngine:
             
             # Convert JD (UT) to local time string
             def jd_to_local_time_str(jd, tz):
-                """Convert JD (UT) to local time string HH:MM:SS"""
+                """Convert JD (UT) to local time string HH:MM:SS
+                
+                FIX: Julian Day starts at NOON, not midnight.
+                JD 0.0 = noon, 0.25 = 6pm, 0.5 = midnight, 0.75 = 6am
+                Adding 0.5 converts from noon-based to midnight-based fraction.
+                """
                 # Add timezone to get local JD
                 local_jd = jd + tz / 24.0
-                # Extract fractional day
-                frac = (local_jd % 1) * 24.0
-                if frac < 0:
-                    frac += 24.0
-                h = int(frac)
-                m = int((frac - h) * 60)
-                s = int(((frac - h) * 60 - m) * 60)
+                # FIX: Add 0.5 to shift from noon-based (JD default) to midnight-based
+                frac = (local_jd + 0.5) % 1  # Now 0 = midnight
+                hours_decimal = frac * 24.0
+                h = int(hours_decimal)
+                m = int((hours_decimal - h) * 60)
+                s = int(((hours_decimal - h) * 60 - m) * 60)
                 return f"{h:02d}:{m:02d}:{s:02d}"
             
             sunrise_local = jd_to_local_time_str(sunrise_jd, tz_offset)
@@ -1908,14 +1913,19 @@ class AstroEngine:
         """
         try:
             bhavabala = {}
-            balas = chart_data.get("Balas", {})
-            bhava_data = balas.get("BhavaBala", {})
+            # FIX: Try multiple access paths for jyotishganit structure variations (camelCase and snake_case)
+            balas = chart_data.get("Balas") or chart_data.get("balas") or {}
+            bhava_data = balas.get("BhavaBala") or balas.get("bhava_bala") or balas.get("bhavabala") or {}
+            
+            # If balas itself contains Total/total, it might be the bhavabala dict directly
+            if not bhava_data and isinstance(balas, dict) and ("Total" in balas or "total" in balas):
+                bhava_data = balas
             
             if bhava_data:
-                totals = bhava_data.get("Total", [0]*12)
-                adhipathi = bhava_data.get("BhavaAdhipathibala", [0]*12)
-                digbala = bhava_data.get("BhavaDigbala", [0]*12)
-                drishtibala = bhava_data.get("BhavaDrishtibala", [0]*12)
+                totals = bhava_data.get("Total") or bhava_data.get("total") or [0]*12
+                adhipathi = bhava_data.get("BhavaAdhipathibala") or bhava_data.get("bhava_adhipathi_bala") or [0]*12
+                digbala = bhava_data.get("BhavaDigbala") or bhava_data.get("bhava_dig_bala") or [0]*12
+                drishtibala = bhava_data.get("BhavaDrishtibala") or bhava_data.get("bhava_drishti_bala") or [0]*12
                 
                 for i in range(12):
                     bhavabala[f"house_{i+1}"] = {
@@ -2130,19 +2140,23 @@ class AstroEngine:
             
             def get_dasha_sequence(lagna_idx: int) -> list:
                 """
-                Get the sequence of signs for Char Dasha.
-                Odd Lagna: Forward from Lagna (1,2,3,4,5,6,7,8,9,10,11,12)
-                Even Lagna: Backward from Lagna (1,12,11,10,9,8,7,6,5,4,3,2)
+                Get the sequence of signs for Char Dasha (Jaimini).
+                
+                FIX: Traditional Jaimini Char Dasha rules (OPPOSITE of what was coded):
+                - Odd Signs (Aries, Gemini, Leo, Libra, Sagittarius, Aquarius): BACKWARD
+                - Even Signs (Taurus, Cancer, Virgo, Scorpio, Capricorn, Pisces): FORWARD
+                
+                AstroSage confirms: For Sagittarius (odd), sequence is SAG→SCO→LIB→VIR...
                 """
                 sequence = []
                 if lagna_idx in odd_signs:
-                    # Forward sequence
-                    for i in range(12):
-                        sequence.append((lagna_idx + i) % 12)
-                else:
-                    # Backward sequence
+                    # FIX: Odd sign = BACKWARD sequence (Sag→Sco→Lib→Vir...)
                     for i in range(12):
                         sequence.append((lagna_idx - i) % 12)
+                else:
+                    # Even sign = FORWARD sequence
+                    for i in range(12):
+                        sequence.append((lagna_idx + i) % 12)
                 return sequence
             
             # Build Char Dasha periods
@@ -2191,7 +2205,8 @@ class AstroEngine:
                 "maha_dasha": dasha_periods,
                 "current": current_dasha,
                 "lagna_sign": signs[lagna_sign_idx],
-                "sequence_direction": "forward" if lagna_sign_idx in odd_signs else "backward"
+                # FIX: Corrected direction label (odd signs go backward, even go forward)
+                "sequence_direction": "backward" if lagna_sign_idx in odd_signs else "forward"
             }
             
         except Exception as e:
