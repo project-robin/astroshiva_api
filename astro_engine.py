@@ -178,7 +178,7 @@ class AstroEngine:
             # Add Phase 1 enhancements: Astronomical Details, Sunrise/Sunset, KP Cusps
             try:
                 output["astronomical_details"] = self._get_astronomical_constants(jd_ut, birth_datetime, tz_offset, longitude)
-                output["sunrise_sunset"] = self._calculate_sunrise_sunset(jd_ut, latitude, longitude, tz_offset)
+                output["sunrise_sunset"] = self._calculate_sunrise_sunset(jd_ut, latitude, longitude, tz_offset, birth_datetime)
                 
                 # Get house cusps for KP calculation (already calculated in swisseph block)
                 import swisseph as swe
@@ -191,13 +191,14 @@ class AstroEngine:
             # Add Phase 2 enhancements: Bhavabala, Yogini Dasha, Char Dasha
             try:
                 # Extract Bhavabala from jyotishganit chart.charts structure
+                d1_obj = getattr(chart, 'd1_chart', None)
                 if hasattr(chart, 'charts') and isinstance(chart.charts, dict):
-                    output["bhavabala"] = self._extract_bhavabala(chart.charts)
+                    output["bhavabala"] = self._extract_bhavabala(chart.charts, d1_obj)
                 else:
                     # Try alternate access method
                     raw_data = getattr(chart, '_raw_data', None) or getattr(chart, 'charts', None)
                     if isinstance(raw_data, dict):
-                        output["bhavabala"] = self._extract_bhavabala(raw_data)
+                        output["bhavabala"] = self._extract_bhavabala(raw_data, d1_obj)
                     else:
                         output["bhavabala"] = {"note": "Bhavabala requires jyotishganit chart data"}
                 
@@ -1900,29 +1901,32 @@ class AstroEngine:
     def _calculate_sunrise_sunset(self, jd_ut: float, lat: float, lon: float, tz_offset: float = 5.5, birth_date: datetime = None) -> Dict[str, Any]:
         """
         Calculate sunrise, sunset, and day duration.
-        Uses robust method: Calculate for the calendar day of birth.
+        Uses robust method: Calculate for the LOCAL calendar day of birth.
         """
         try:
             import swisseph as swe
             
-            # Use provided birth_date or estimate from JD usually passed (less reliable if not passed)
-            # ideally we should use the datetime object to pinpoint the "Day"
+            # Use provided birth_date or estimate from JD
             if not birth_date:
-                # Fallback if birth_date not passed (compatibility)
-                # But to fix the 12h inversion, we MUST target the specific calendar day's noon
-                # Extract YMD from JD?
-                # Using swisseph to date
                 y, m, d, h = swe.revjul(jd_ut)
-                target_day_jd = swe.julday(y, m, d, 12.0) # Noon UT on that day
             else:
-                target_day_jd = swe.julday(birth_date.year, birth_date.month, birth_date.day, 12.0)
+                y, m, d = birth_date.year, birth_date.month, birth_date.day
+
+            # FIX: To ensure we get the Sunrise and Sunset for the SAME local day,
+            # we must start the search from LOCAL MIDNIGHT converted to UT.
+            
+            # Midnight Local JD (approx)
+            midnight_local_jd = swe.julday(y, m, d, 0.0)
+            
+            # Convert to UT by subtracting timezone offset
+            target_search_start_ut = midnight_local_jd - (tz_offset / 24.0)
 
             # Hindu sunrise/sunset flags (geometric, disc center, no refraction)
             _rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
             
-            # Calculate sunrise for this day
+            # Calculate sunrise for this day (searching forward from midnight UT)
             result_rise = swe.rise_trans(
-                float(target_day_jd),
+                float(target_search_start_ut),
                 int(swe.SUN),
                 float(lon),
                 float(lat),
@@ -1932,9 +1936,9 @@ class AstroEngine:
                 int(_rise_flags + swe.CALC_RISE)
             )
             
-            # Calculate sunset for this day
+            # Calculate sunset for this day (searching forward from midnight UT)
             result_set = swe.rise_trans(
-                float(target_day_jd),
+                float(target_search_start_ut),
                 int(swe.SUN),
                 float(lon),
                 float(lat),
@@ -1951,12 +1955,8 @@ class AstroEngine:
             def jd_to_local(jd, tz):
                 # Add timezone offset
                 jd_local = jd + (tz / 24.0)
-                # Get fractional day (0.5 is noon, 0.0 is midnight)
-                # But wait: JD starts at Noon. 2459000.0 is Noon.
-                # So .0 is Noon, .5 is Midnight.
-                # We want 0-24h format from Midnight.
-                
-                # Shift so 0.0 is Midnight
+                # JD 0.0 is Noon. So .5 is Midnight.
+                # Shift to make 0.0 = Midnight
                 jd_midnight_base = jd_local + 0.5
                 frac = jd_midnight_base % 1.0
                 
@@ -1970,18 +1970,22 @@ class AstroEngine:
             sunset_str = jd_to_local(sunset_jd, tz_offset)
             
             # Duration
-            day_len = (sunset_jd - sunrise_jd) * 24.0
+            day_len_hours = (sunset_jd - sunrise_jd) * 24.0
+            
+            # Safety for edge cases
+            if day_len_hours < 0:
+                 day_len_hours += 24.0
             
             # Format Duration
-            dh = int(day_len)
-            dm = int((day_len - dh) * 60)
-            ds = int(((day_len - dh) * 60 - dm) * 60)
+            dh = int(day_len_hours)
+            dm = int((day_len_hours - dh) * 60)
+            ds = int(((day_len_hours - dh) * 60 - dm) * 60)
             
             return {
                 "sunrise": sunrise_str,
                 "sunset": sunset_str,
                 "day_duration": f"{dh:02d}:{dm:02d}:{ds:02d}",
-                "day_duration_hours": round(day_len, 4)
+                "day_duration_hours": round(day_len_hours, 4)
             }
             
         except Exception as e:
@@ -1993,70 +1997,77 @@ class AstroEngine:
     # PHASE 2: Bhavabala, Yogini Dasha, Char Dasha
     # ============================================================
     
-    def _extract_bhavabala(self, chart_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_bhavabala(self, chart_data: Any, d1_chart: Any = None) -> Dict[str, Any]:
         """
         Extract Bhavabala (House Strength).
-        Robust extraction that checks multiple path variations (CamelCase, snake_case).
+        Checks 'Balas' in chart_data dict, OR 'strength' attr in d1_chart.houses.
         """
         try:
             bhavabala = {}
             for i in range(12):
                 bhavabala[f"house_{i+1}"] = {"total": 0, "rank": 0}
 
-            # 1. Try finding the "Balas" container
-            # It could be at root, or inside chart_data
+            found_data = False
+            
+            # 1. Dictionary Lookup
             balas_node = None
+            if isinstance(chart_data, dict):
+                 balas_node = chart_data.get("Balas") or chart_data.get("balas")
+            elif hasattr(chart_data, 'Balas'): 
+                 balas_node = chart_data.Balas
             
-            # Direct checks
-            if "Balas" in chart_data: balas_node = chart_data["Balas"]
-            elif "balas" in chart_data: balas_node = chart_data["balas"]
-            
-            # 2. If chart_data IS the chart object itself (not dict), try getattr
-            if not balas_node and hasattr(chart_data, 'Balas'): balas_node = chart_data.Balas
-            if not balas_node and hasattr(chart_data, 'balas'): balas_node = chart_data.balas
-
-            # 3. Try finding BhavaBala inside Balas
             bhava_data = None
             if balas_node:
                 if isinstance(balas_node, dict):
                     bhava_data = balas_node.get("BhavaBala") or balas_node.get("bhava_bala") or balas_node.get("bhavabala")
-                    # Sometimes structure is flattened
                     if not bhava_data and "Total" in balas_node: bhava_data = balas_node
                 else:
-                    # Object attribute access
                     bhava_data = getattr(balas_node, "BhavaBala", None) or getattr(balas_node, "bhava_bala", None)
             
-            # 4. If still not found, check if chart_data itself is the Bhavabala dict (rare but possible)
-            if not bhava_data and isinstance(chart_data, dict) and ("Total" in chart_data or "total" in chart_data):
-                bhava_data = chart_data
-
             if bhava_data:
-                # Extract arrays
                 get_val = lambda obj, key: obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
-                
                 totals = get_val(bhava_data, "Total") or get_val(bhava_data, "total") or []
-                adhipathi = get_val(bhava_data, "BhavaAdhipathibala") or get_val(bhava_data, "bhava_adhipathi_bala") or []
-                dig = get_val(bhava_data, "BhavaDigbala") or get_val(bhava_data, "bhava_dig_bala") or []
-                drishti = get_val(bhava_data, "BhavaDrishtibala") or get_val(bhava_data, "bhava_drishti_bala") or []
                 
                 if totals:
+                    found_data = True
                     for i in range(12):
-                        h_key = f"house_{i+1}"
-                        if i < len(totals):
-                            bhavabala[h_key]["total"] = round(totals[i], 2)
-                        
-                        if i < len(adhipathi): bhavabala[h_key]["adhipathi_bala"] = round(adhipathi[i], 2)
-                        if i < len(dig): bhavabala[h_key]["dig_bala"] = round(dig[i], 2)
-                        if i < len(drishti): bhavabala[h_key]["drishti_bala"] = round(drishti[i], 2)
+                        if i < len(totals): 
+                            bhavabala[f"house_{i+1}"]["total"] = round(totals[i], 2)
                     
-                    # Ranks
+                    # Compute ranks
                     sorted_idxs = sorted(range(12), key=lambda x: totals[x] if x < len(totals) else 0, reverse=True)
                     for rank, idx in enumerate(sorted_idxs, 1):
                         bhavabala[f"house_{idx+1}"]["rank"] = rank
-                else:
-                    bhavabala["note"] = "Bhavabala data found but empty arrays."
-            else:
-                bhavabala["note"] = "Bhavabala data not found in chart structure."
+            
+            # 2. Inspect d1_chart.houses (Backup)
+            if not found_data and d1_chart and hasattr(d1_chart, 'houses'):
+                try:
+                    vals = []
+                    # Check first house to see if attr exists
+                    h1 = d1_chart.houses[0]
+                    if hasattr(h1, 'shadbala') or hasattr(h1, 'strength') or hasattr(h1, 'total_strength'):
+                        found_data = True
+                        for i, house in enumerate(d1_chart.houses):
+                            val = getattr(house, 'shadbala', 0) or getattr(house, 'strength', 0) or getattr(house, 'total_strength', 0)
+                            if isinstance(val, dict): val = val.get('Total', 0) or val.get('total', 0)
+                            if hasattr(val, 'get'): val = val.get('Total', 0)
+                            
+                            try:
+                                fval = float(val)
+                            except:
+                                fval = 0.0
+                                
+                            bhavabala[f"house_{i+1}"]["total"] = round(fval, 2)
+                            vals.append(fval)
+                        
+                        sorted_idxs = sorted(range(12), key=lambda x: vals[x], reverse=True)
+                        for rank, idx in enumerate(sorted_idxs, 1):
+                             bhavabala[f"house_{idx+1}"]["rank"] = rank
+                except Exception:
+                    pass
+
+            if not found_data:
+                bhavabala["note"] = "Bhavabala data not found. This feature requires extended calculations."
 
             return bhavabala
             
