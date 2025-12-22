@@ -1057,7 +1057,8 @@ class AstroEngine:
             # Span = (Years / 120) * 13.3333
             span = (years / total_years) * nak_span
             
-            if current_deg_pointer + span >= remaining_deg:
+            # Check if we are within this span OR if this is the last one (catch-all)
+            if (current_deg_pointer + span >= remaining_deg) or (i == 8):
                 sub_lord = l_name
                 
                 # Setup for Sub-Sub Lord
@@ -1076,7 +1077,8 @@ class AstroEngine:
                     # Span of SS = (Years / 120) * Sub-Lord-Span
                     span_ss = (years_ss / total_years) * span
                     
-                    if ss_pointer + span_ss >= deg_in_sub:
+                    # Check if within span or last one
+                    if (ss_pointer + span_ss >= deg_in_sub) or (j == 8):
                         sub_sub_lord = ss_name
                         break
                     ss_pointer += span_ss
