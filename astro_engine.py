@@ -230,10 +230,17 @@ class AstroEngine:
                     debug_info = {}
                     if hasattr(chart, '__dict__'):
                         debug_info["attrs"] = list(chart.__dict__.keys())
-                    if hasattr(chart, 'charts'):
-                        debug_info["charts_keys"] = list(chart.charts.keys()) if isinstance(chart.charts, dict) else str(type(chart.charts))
-                    # Try to find anything with 'bala'
-                    debug_info["bala_candidates"] = [a for a in dir(chart) if 'bala' in a.lower()]
+                    
+                    # Probe d1_chart specifically
+                    if hasattr(chart, 'd1_chart'):
+                        d1 = chart.d1_chart
+                        debug_info["d1_attrs"] = dir(d1)
+                        debug_info["d1_bala_candidates"] = [a for a in dir(d1) if 'bala' in a.lower()]
+                        
+                        # Check inside points/planets/houses
+                        if hasattr(d1, 'points'):
+                             debug_info["d1_points_keys"] = list(d1.points.keys()) if isinstance(d1.points, dict) else str(type(d1.points))
+
                     output["debug_bhavabala"] = debug_info
                 except:
                     pass
@@ -2140,6 +2147,14 @@ class AstroEngine:
                 # If equal, default to regular lord for now (can add exaltation logic later)
                 return sign1
 
+            def resolve_sign_index(sign_val):
+                """Helper to ensure sign is returned as 0-11 index"""
+                if isinstance(sign_val, int):
+                    return sign_val
+                if isinstance(sign_val, str) and sign_val in signs:
+                    return signs.index(sign_val)
+                return -1
+
             def get_lord_sign(sign_idx: int) -> int:
                 """Get the sign where the lord is placed, handling Dual Lordship."""
                 
@@ -2149,19 +2164,17 @@ class AstroEngine:
                     mars_pos = -1
                     ketu_pos = -1
                     
-                    # Find Mars
                     if "Mars" in planet_positions:
                         p = planet_positions["Mars"]
-                        mars_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        raw_sign = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        mars_pos = resolve_sign_index(raw_sign)
                     
-                    # Find Ketu
                     if "Ketu" in planet_positions:
                         p = planet_positions["Ketu"]
-                        ketu_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        raw_sign = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        ketu_pos = resolve_sign_index(raw_sign)
                         
                     if mars_pos != -1 and ketu_pos != -1:
-                        # Determine stronger lord
-                        # Note: We need the position OF the lord
                         return get_stronger_sign(mars_pos, ketu_pos)
                     return mars_pos if mars_pos != -1 else (ketu_pos if ketu_pos != -1 else 0)
 
@@ -2172,11 +2185,13 @@ class AstroEngine:
                     
                     if "Saturn" in planet_positions:
                         p = planet_positions["Saturn"]
-                        sat_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        raw_sign = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        sat_pos = resolve_sign_index(raw_sign)
                         
                     if "Rahu" in planet_positions:
                         p = planet_positions["Rahu"]
-                        rahu_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        raw_sign = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        rahu_pos = resolve_sign_index(raw_sign)
                         
                     if sat_pos != -1 and rahu_pos != -1:
                         return get_stronger_sign(sat_pos, rahu_pos)
@@ -2186,7 +2201,10 @@ class AstroEngine:
                 lord_name = sign_lords[sign_idx]
                 if lord_name in planet_positions:
                     p = planet_positions[lord_name]
-                    return p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                    raw_sign = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                    idx = resolve_sign_index(raw_sign)
+                    if idx != -1:
+                        return idx
                 
                 # Default locations
                 lord_default_signs = [i for i, l in sign_lords.items() if l == lord_name]
