@@ -9,7 +9,7 @@
             "latitude": 19.3833,
             "longitude": 74.65,
             "timezone_offset": 5.5,
-            "generated_at": "2025-12-21T23:45:04.125989"
+            "generated_at": "2025-12-21T23:58:58.622605"
         },
         "divisional_charts": {
             "D1": {
@@ -3470,10 +3470,10 @@
             }
         },
         "meta": {
-            "api_version": "2.2.0",
+            "api_version": "2.3.0",
             "calculation_method": "swisseph_parashara",
             "ayanamsa": "Lahiri",
-            "engine": "astro-shiva-engine-v2.2",
+            "engine": "astro-shiva-engine-v2.3",
             "features": [
                 "Jaimini",
                 "KP",
@@ -3481,7 +3481,10 @@
                 "Transits",
                 "Custom Varga Engine",
                 "Astronomical Details",
-                "KP Cusps"
+                "KP Cusps",
+                "Yogini Dasha",
+                "Char Dasha",
+                "Bhavabala"
             ]
         },
         "astronomical_details": {
@@ -3504,7 +3507,8 @@
             "local_time_correction": "-31:23"
         },
         "sunrise_sunset": {
-            "error": "must be real number, not NoneType"
+            "error": "must be real number, not NoneType",
+            "traceback": "Traceback (most recent call last):\n  File \"/opt/render/project/src/astro_engine.py\", line 1817, in _calculate_sunrise_sunset\n    ret_rise, tret_rise = swe.rise_trans(\nTypeError: must be real number, not str\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/opt/render/project/src/astro_engine.py\", line 1840, in _calculate_sunrise_sunset\n    ret_rise = swe.rise_trans(\nTypeError: must be real number, not NoneType\n"
         },
         "kp_cusps": {
             "cusp_1": {
@@ -3604,6 +3608,578 @@
                 "sub_sub_lord": "Saturn"
             }
         },
+        "bhavabala": {},
+        "yogini_dasha": {
+            "periods": [
+                {
+                    "yogini": "Bhramari",
+                    "abbrev": "Br",
+                    "planet": "Mars",
+                    "years": 4,
+                    "start": "2001-05-26",
+                    "end": "2005-05-26"
+                },
+                {
+                    "yogini": "Bhadrika",
+                    "abbrev": "Ba",
+                    "planet": "Mercury",
+                    "years": 5,
+                    "start": "2005-05-26",
+                    "end": "2010-05-27"
+                },
+                {
+                    "yogini": "Ulka",
+                    "abbrev": "Ul",
+                    "planet": "Saturn",
+                    "years": 6,
+                    "start": "2010-05-27",
+                    "end": "2016-05-26"
+                },
+                {
+                    "yogini": "Siddha",
+                    "abbrev": "Si",
+                    "planet": "Venus",
+                    "years": 7,
+                    "start": "2016-05-26",
+                    "end": "2023-05-27"
+                },
+                {
+                    "yogini": "Sankata",
+                    "abbrev": "Sn",
+                    "planet": "Rahu",
+                    "years": 8,
+                    "start": "2023-05-27",
+                    "end": "2031-05-27"
+                },
+                {
+                    "yogini": "Mangala",
+                    "abbrev": "Ma",
+                    "planet": "Moon",
+                    "years": 1,
+                    "start": "2031-05-27",
+                    "end": "2032-05-26"
+                },
+                {
+                    "yogini": "Pingala",
+                    "abbrev": "Pi",
+                    "planet": "Sun",
+                    "years": 2,
+                    "start": "2032-05-26",
+                    "end": "2034-05-27"
+                },
+                {
+                    "yogini": "Dhanya",
+                    "abbrev": "Dh",
+                    "planet": "Jupiter",
+                    "years": 3,
+                    "start": "2034-05-27",
+                    "end": "2037-05-26"
+                },
+                {
+                    "yogini": "Bhramari",
+                    "abbrev": "Br",
+                    "planet": "Mars",
+                    "years": 4,
+                    "start": "2037-05-26",
+                    "end": "2041-05-26"
+                },
+                {
+                    "yogini": "Bhadrika",
+                    "abbrev": "Ba",
+                    "planet": "Mercury",
+                    "years": 5,
+                    "start": "2041-05-26",
+                    "end": "2046-05-27"
+                },
+                {
+                    "yogini": "Ulka",
+                    "abbrev": "Ul",
+                    "planet": "Saturn",
+                    "years": 6,
+                    "start": "2046-05-27",
+                    "end": "2052-05-26"
+                },
+                {
+                    "yogini": "Siddha",
+                    "abbrev": "Si",
+                    "planet": "Venus",
+                    "years": 7,
+                    "start": "2052-05-26",
+                    "end": "2059-05-27"
+                },
+                {
+                    "yogini": "Sankata",
+                    "abbrev": "Sn",
+                    "planet": "Rahu",
+                    "years": 8,
+                    "start": "2059-05-27",
+                    "end": "2067-05-27"
+                },
+                {
+                    "yogini": "Mangala",
+                    "abbrev": "Ma",
+                    "planet": "Moon",
+                    "years": 1,
+                    "start": "2067-05-27",
+                    "end": "2068-05-26"
+                },
+                {
+                    "yogini": "Pingala",
+                    "abbrev": "Pi",
+                    "planet": "Sun",
+                    "years": 2,
+                    "start": "2068-05-26",
+                    "end": "2070-05-27"
+                },
+                {
+                    "yogini": "Dhanya",
+                    "abbrev": "Dh",
+                    "planet": "Jupiter",
+                    "years": 3,
+                    "start": "2070-05-27",
+                    "end": "2073-05-26"
+                },
+                {
+                    "yogini": "Bhramari",
+                    "abbrev": "Br",
+                    "planet": "Mars",
+                    "years": 4,
+                    "start": "2073-05-26",
+                    "end": "2077-05-26"
+                },
+                {
+                    "yogini": "Bhadrika",
+                    "abbrev": "Ba",
+                    "planet": "Mercury",
+                    "years": 5,
+                    "start": "2077-05-26",
+                    "end": "2082-05-27"
+                },
+                {
+                    "yogini": "Ulka",
+                    "abbrev": "Ul",
+                    "planet": "Saturn",
+                    "years": 6,
+                    "start": "2082-05-27",
+                    "end": "2088-05-26"
+                },
+                {
+                    "yogini": "Siddha",
+                    "abbrev": "Si",
+                    "planet": "Venus",
+                    "years": 7,
+                    "start": "2088-05-26",
+                    "end": "2095-05-27"
+                },
+                {
+                    "yogini": "Sankata",
+                    "abbrev": "Sn",
+                    "planet": "Rahu",
+                    "years": 8,
+                    "start": "2095-05-27",
+                    "end": "2103-05-28"
+                },
+                {
+                    "yogini": "Mangala",
+                    "abbrev": "Ma",
+                    "planet": "Moon",
+                    "years": 1,
+                    "start": "2103-05-28",
+                    "end": "2104-05-27"
+                },
+                {
+                    "yogini": "Pingala",
+                    "abbrev": "Pi",
+                    "planet": "Sun",
+                    "years": 2,
+                    "start": "2104-05-27",
+                    "end": "2106-05-28"
+                },
+                {
+                    "yogini": "Dhanya",
+                    "abbrev": "Dh",
+                    "planet": "Jupiter",
+                    "years": 3,
+                    "start": "2106-05-28",
+                    "end": "2109-05-27"
+                },
+                {
+                    "yogini": "Bhramari",
+                    "abbrev": "Br",
+                    "planet": "Mars",
+                    "years": 4,
+                    "start": "2109-05-27",
+                    "end": "2113-05-27"
+                },
+                {
+                    "yogini": "Bhadrika",
+                    "abbrev": "Ba",
+                    "planet": "Mercury",
+                    "years": 5,
+                    "start": "2113-05-27",
+                    "end": "2118-05-28"
+                },
+                {
+                    "yogini": "Ulka",
+                    "abbrev": "Ul",
+                    "planet": "Saturn",
+                    "years": 6,
+                    "start": "2118-05-28",
+                    "end": "2124-05-27"
+                },
+                {
+                    "yogini": "Siddha",
+                    "abbrev": "Si",
+                    "planet": "Venus",
+                    "years": 7,
+                    "start": "2124-05-27",
+                    "end": "2131-05-28"
+                },
+                {
+                    "yogini": "Sankata",
+                    "abbrev": "Sn",
+                    "planet": "Rahu",
+                    "years": 8,
+                    "start": "2131-05-28",
+                    "end": "2139-05-28"
+                },
+                {
+                    "yogini": "Mangala",
+                    "abbrev": "Ma",
+                    "planet": "Moon",
+                    "years": 1,
+                    "start": "2139-05-28",
+                    "end": "2140-05-27"
+                },
+                {
+                    "yogini": "Pingala",
+                    "abbrev": "Pi",
+                    "planet": "Sun",
+                    "years": 2,
+                    "start": "2140-05-27",
+                    "end": "2142-05-28"
+                },
+                {
+                    "yogini": "Dhanya",
+                    "abbrev": "Dh",
+                    "planet": "Jupiter",
+                    "years": 3,
+                    "start": "2142-05-28",
+                    "end": "2145-05-27"
+                }
+            ],
+            "current": {
+                "yogini": "Sankata",
+                "abbrev": "Sn",
+                "planet": "Rahu",
+                "years": 8,
+                "start": "2023-05-27",
+                "end": "2031-05-27"
+            },
+            "total_cycle_years": 36,
+            "starting_yogini": "Bhramari"
+        },
+        "char_dasha": {
+            "maha_dasha": [
+                {
+                    "sign": "Sagittarius",
+                    "abbrev": "SAG",
+                    "lord": "Jupiter",
+                    "years": 1,
+                    "start": "26/05/01",
+                    "end": "27/05/02"
+                },
+                {
+                    "sign": "Gemini",
+                    "abbrev": "GEM",
+                    "lord": "Mercury",
+                    "years": 1,
+                    "start": "27/05/02",
+                    "end": "27/05/03"
+                },
+                {
+                    "sign": "Capricorn",
+                    "abbrev": "CAP",
+                    "lord": "Saturn",
+                    "years": 1,
+                    "start": "27/05/03",
+                    "end": "26/05/04"
+                },
+                {
+                    "sign": "Cancer",
+                    "abbrev": "CAN",
+                    "lord": "Moon",
+                    "years": 1,
+                    "start": "26/05/04",
+                    "end": "26/05/05"
+                },
+                {
+                    "sign": "Aquarius",
+                    "abbrev": "AQU",
+                    "lord": "Saturn",
+                    "years": 12,
+                    "start": "26/05/05",
+                    "end": "26/05/17"
+                },
+                {
+                    "sign": "Leo",
+                    "abbrev": "LEO",
+                    "lord": "Sun",
+                    "years": 1,
+                    "start": "26/05/17",
+                    "end": "27/05/18"
+                },
+                {
+                    "sign": "Pisces",
+                    "abbrev": "PIS",
+                    "lord": "Jupiter",
+                    "years": 4,
+                    "start": "27/05/18",
+                    "end": "27/05/22"
+                },
+                {
+                    "sign": "Virgo",
+                    "abbrev": "VIR",
+                    "lord": "Mercury",
+                    "years": 4,
+                    "start": "27/05/22",
+                    "end": "27/05/26"
+                },
+                {
+                    "sign": "Aries",
+                    "abbrev": "ARI",
+                    "lord": "Mars",
+                    "years": 1,
+                    "start": "27/05/26",
+                    "end": "27/05/27"
+                },
+                {
+                    "sign": "Libra",
+                    "abbrev": "LIB",
+                    "lord": "Venus",
+                    "years": 8,
+                    "start": "27/05/27",
+                    "end": "27/05/35"
+                },
+                {
+                    "sign": "Taurus",
+                    "abbrev": "TAU",
+                    "lord": "Venus",
+                    "years": 1,
+                    "start": "27/05/35",
+                    "end": "26/05/36"
+                },
+                {
+                    "sign": "Scorpio",
+                    "abbrev": "SCO",
+                    "lord": "Mars",
+                    "years": 8,
+                    "start": "26/05/36",
+                    "end": "26/05/44"
+                },
+                {
+                    "sign": "Sagittarius",
+                    "abbrev": "SAG",
+                    "lord": "Jupiter",
+                    "years": 1,
+                    "start": "26/05/44",
+                    "end": "26/05/45"
+                },
+                {
+                    "sign": "Gemini",
+                    "abbrev": "GEM",
+                    "lord": "Mercury",
+                    "years": 1,
+                    "start": "26/05/45",
+                    "end": "27/05/46"
+                },
+                {
+                    "sign": "Capricorn",
+                    "abbrev": "CAP",
+                    "lord": "Saturn",
+                    "years": 1,
+                    "start": "27/05/46",
+                    "end": "27/05/47"
+                },
+                {
+                    "sign": "Cancer",
+                    "abbrev": "CAN",
+                    "lord": "Moon",
+                    "years": 1,
+                    "start": "27/05/47",
+                    "end": "26/05/48"
+                },
+                {
+                    "sign": "Aquarius",
+                    "abbrev": "AQU",
+                    "lord": "Saturn",
+                    "years": 12,
+                    "start": "26/05/48",
+                    "end": "26/05/60"
+                },
+                {
+                    "sign": "Leo",
+                    "abbrev": "LEO",
+                    "lord": "Sun",
+                    "years": 1,
+                    "start": "26/05/60",
+                    "end": "26/05/61"
+                },
+                {
+                    "sign": "Pisces",
+                    "abbrev": "PIS",
+                    "lord": "Jupiter",
+                    "years": 4,
+                    "start": "26/05/61",
+                    "end": "26/05/65"
+                },
+                {
+                    "sign": "Virgo",
+                    "abbrev": "VIR",
+                    "lord": "Mercury",
+                    "years": 4,
+                    "start": "26/05/65",
+                    "end": "26/05/69"
+                },
+                {
+                    "sign": "Aries",
+                    "abbrev": "ARI",
+                    "lord": "Mars",
+                    "years": 1,
+                    "start": "26/05/69",
+                    "end": "27/05/70"
+                },
+                {
+                    "sign": "Libra",
+                    "abbrev": "LIB",
+                    "lord": "Venus",
+                    "years": 8,
+                    "start": "27/05/70",
+                    "end": "27/05/78"
+                },
+                {
+                    "sign": "Taurus",
+                    "abbrev": "TAU",
+                    "lord": "Venus",
+                    "years": 1,
+                    "start": "27/05/78",
+                    "end": "27/05/79"
+                },
+                {
+                    "sign": "Scorpio",
+                    "abbrev": "SCO",
+                    "lord": "Mars",
+                    "years": 8,
+                    "start": "27/05/79",
+                    "end": "27/05/87"
+                },
+                {
+                    "sign": "Sagittarius",
+                    "abbrev": "SAG",
+                    "lord": "Jupiter",
+                    "years": 1,
+                    "start": "27/05/87",
+                    "end": "26/05/88"
+                },
+                {
+                    "sign": "Gemini",
+                    "abbrev": "GEM",
+                    "lord": "Mercury",
+                    "years": 1,
+                    "start": "26/05/88",
+                    "end": "26/05/89"
+                },
+                {
+                    "sign": "Capricorn",
+                    "abbrev": "CAP",
+                    "lord": "Saturn",
+                    "years": 1,
+                    "start": "26/05/89",
+                    "end": "27/05/90"
+                },
+                {
+                    "sign": "Cancer",
+                    "abbrev": "CAN",
+                    "lord": "Moon",
+                    "years": 1,
+                    "start": "27/05/90",
+                    "end": "27/05/91"
+                },
+                {
+                    "sign": "Aquarius",
+                    "abbrev": "AQU",
+                    "lord": "Saturn",
+                    "years": 12,
+                    "start": "27/05/91",
+                    "end": "28/05/03"
+                },
+                {
+                    "sign": "Leo",
+                    "abbrev": "LEO",
+                    "lord": "Sun",
+                    "years": 1,
+                    "start": "28/05/03",
+                    "end": "27/05/04"
+                },
+                {
+                    "sign": "Pisces",
+                    "abbrev": "PIS",
+                    "lord": "Jupiter",
+                    "years": 4,
+                    "start": "27/05/04",
+                    "end": "27/05/08"
+                },
+                {
+                    "sign": "Virgo",
+                    "abbrev": "VIR",
+                    "lord": "Mercury",
+                    "years": 4,
+                    "start": "27/05/08",
+                    "end": "27/05/12"
+                },
+                {
+                    "sign": "Aries",
+                    "abbrev": "ARI",
+                    "lord": "Mars",
+                    "years": 1,
+                    "start": "27/05/12",
+                    "end": "27/05/13"
+                },
+                {
+                    "sign": "Libra",
+                    "abbrev": "LIB",
+                    "lord": "Venus",
+                    "years": 8,
+                    "start": "27/05/13",
+                    "end": "27/05/21"
+                },
+                {
+                    "sign": "Taurus",
+                    "abbrev": "TAU",
+                    "lord": "Venus",
+                    "years": 1,
+                    "start": "27/05/21",
+                    "end": "28/05/22"
+                },
+                {
+                    "sign": "Scorpio",
+                    "abbrev": "SCO",
+                    "lord": "Mars",
+                    "years": 8,
+                    "start": "28/05/22",
+                    "end": "28/05/30"
+                }
+            ],
+            "current": {
+                "sign": "Virgo",
+                "abbrev": "VIR",
+                "lord": "Mercury",
+                "years": 4,
+                "start": "27/05/22",
+                "end": "27/05/26"
+            },
+            "lagna_sign": "Sagittarius"
+        },
         "jaimini_karakas": {
             "Atmakaraka": {
                 "planet": "Moon",
@@ -3695,55 +4271,55 @@
         "current_transits": {
             "Sun": {
                 "current_sign": "Sagittarius",
-                "current_degree": 6.14795590086035,
+                "current_degree": 6.15715201176784,
                 "house_from_birth_moon": 7,
                 "is_retrograde": false
             },
             "Moon": {
                 "current_sign": "Sagittarius",
-                "current_degree": 27.5089823141432,
+                "current_degree": 27.6197746131369,
                 "house_from_birth_moon": 7,
                 "is_retrograde": false
             },
             "Mars": {
                 "current_sign": "Sagittarius",
-                "current_degree": 10.829697476946,
+                "current_degree": 10.8365524275504,
                 "house_from_birth_moon": 7,
                 "is_retrograde": false
             },
             "Mercury": {
                 "current_sign": "Scorpio",
-                "current_degree": 19.4924139137144,
+                "current_degree": 19.5055171514915,
                 "house_from_birth_moon": 6,
                 "is_retrograde": false
             },
             "Jupiter": {
                 "current_sign": "Gemini",
-                "current_degree": 28.3821414423484,
+                "current_degree": 28.3810871313162,
                 "house_from_birth_moon": 1,
                 "is_retrograde": false
             },
             "Venus": {
                 "current_sign": "Sagittarius",
-                "current_degree": 2.38612692606824,
+                "current_degree": 2.39749092467201,
                 "house_from_birth_moon": 7,
                 "is_retrograde": false
             },
             "Saturn": {
                 "current_sign": "Pisces",
-                "current_degree": 1.44249788273862,
+                "current_degree": 1.44287722699301,
                 "house_from_birth_moon": 10,
                 "is_retrograde": false
             },
             "Rahu": {
                 "current_sign": "Aquarius",
-                "current_degree": 18.4794148996378,
+                "current_degree": 18.4789364997353,
                 "house_from_birth_moon": 9,
                 "is_retrograde": false
             },
             "Ketu": {
                 "current_sign": "Leo",
-                "current_degree": 18.4794148996378,
+                "current_degree": 18.4789364997353,
                 "house_from_birth_moon": 3,
                 "is_retrograde": false
             }
