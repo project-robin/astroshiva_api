@@ -2067,12 +2067,84 @@ class AstroEngine:
                     pass
 
             if not found_data:
-                bhavabala["note"] = "Bhavabala data not found. This feature requires extended calculations."
+                # 3. Manual Calculation (Fallback)
+                # Use House Lord's Shadbala as proxy for Bhavabala (Bhava Adhipathi Bala)
+                manual_data = self._calculate_manual_bhavabala(d1_chart)
+                if manual_data:
+                    bhavabala = manual_data
+                    # Add a note to the first entry or separate
+                    bhavabala["note"] = "Approximation based on House Lord's Shadbala (Bhava Adhipathi Bala)."
+                else:
+                    bhavabala["note"] = "Bhavabala data not found. This feature requires extended calculations."
 
             return bhavabala
             
         except Exception as e:
             return {"error": str(e)}
+
+    def _calculate_manual_bhavabala(self, d1_chart: Any) -> Dict[str, Any]:
+        """
+        Calculate approximate Bhavabala using House Lord's Shadbala.
+        """
+        try:
+            if not d1_chart or not hasattr(d1_chart, 'houses'):
+                return {}
+
+            bhavabala = {}
+            
+            # Map of Sign -> Lord
+            sign_lords = {
+                "Aries": "Mars", "Taurus": "Venus", "Gemini": "Mercury", "Cancer": "Moon",
+                "Leo": "Sun", "Virgo": "Mercury", "Libra": "Venus", "Scorpio": "Mars",
+                "Sagittarius": "Jupiter", "Capricorn": "Saturn", "Aquarius": "Saturn", "Pisces": "Jupiter"
+            }
+            
+            houses = getattr(d1_chart, 'houses', [])
+            planets = getattr(d1_chart, 'planets', []) # List of planet objects
+            
+            # Convert planets list to dict keyed by name for easy lookup
+            planet_map = {}
+            if isinstance(planets, list):
+                for p in planets:
+                    name = getattr(p, 'celestial_body', '')
+                    planet_map[name] = p
+            elif isinstance(planets, dict):
+                planet_map = planets
+
+            vals = []
+            for i, house in enumerate(houses):
+                sign = getattr(house, 'sign', '')
+                lord = sign_lords.get(sign)
+                
+                lord_strength = 0.0
+                if lord and lord in planet_map:
+                    p_obj = planet_map[lord]
+                    # Try to get shadbala total
+                    # Structure: planet.shadbala['Shadbala']['Total'] or planet.shadbala['Total']
+                    sb = getattr(p_obj, 'shadbala', {})
+                    if isinstance(sb, dict):
+                        # Handle recursive 'Shadbala' key if present
+                        if 'Shadbala' in sb and isinstance(sb['Shadbala'], dict):
+                            lord_strength = sb['Shadbala'].get('Total', 0)
+                        else:
+                            lord_strength = sb.get('Total', 0)
+                    
+                bhavabala[f"house_{i+1}"] = {
+                    "total": round(float(lord_strength), 2),
+                    "lord": lord,
+                    "adhipathi_bala": round(float(lord_strength), 2)
+                }
+                vals.append(float(lord_strength))
+            
+            # Ranks
+            sorted_idxs = sorted(range(len(vals)), key=lambda x: vals[x], reverse=True)
+            for rank, idx in enumerate(sorted_idxs, 1):
+                bhavabala[f"house_{idx+1}"]["rank"] = rank
+                
+            return bhavabala
+            
+        except Exception:
+            return {}
     
     def _calculate_yogini_dasha(self, birth_datetime: datetime, moon_nakshatra_idx: int = None, moon_degree: float = None) -> Dict[str, Any]:
         """
