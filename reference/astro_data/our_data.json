@@ -9,7 +9,7 @@
       "latitude": 19.3833,
       "longitude": 74.65,
       "timezone_offset": 5.5,
-      "generated_at": "2025-12-22T03:04:16.694200"
+      "generated_at": "2025-12-22T04:28:29.511860"
     },
     "divisional_charts": {
       "D1": {
@@ -4253,78 +4253,102 @@
       "vimshottari": {
         "mahadasha": [
           {
-            "lord": "Mercury",
-            "start_date": "2026-04-03 20:30:08.439941",
-            "end_date": "2043-04-04 05:05:50.007941"
-          }
-        ],
-        "current_dasha": {
-          "mahadashas": {
-            "Saturn": {
-              "start": "2007-04-03T23:36:07.863941",
-              "end": "2026-04-03T20:30:08.439941",
-              "antardashas": {
-                "Jupiter": {
-                  "start": "2023-09-21T12:54:56.363141",
-                  "end": "2026-04-03T20:30:08.439941",
-                  "pratyantardashas": {
-                    "Rahu": {
-                      "start": "2025-11-16T01:21:51.628421",
-                      "end": "2026-04-03T20:30:08.439941"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "antardashas_in_current_mahadasha": [
+            "lord": "Jupiter",
+            "start_date": "2001-05-26",
+            "end_date": "2007-04-03",
+            "duration_years": 5.85
+          },
           {
             "lord": "Saturn",
-            "start": "2007-04-03 23:36:07.863941",
-            "end": "2010-04-06 19:06:40.955141"
+            "start_date": "2007-04-03",
+            "end_date": "2026-04-03",
+            "duration_years": 19
           },
           {
             "lord": "Mercury",
-            "start": "2010-04-06 19:06:40.955141",
-            "end": "2012-12-14 22:40:20.036741"
+            "start_date": "2026-04-03",
+            "end_date": "2043-04-03",
+            "duration_years": 17
           },
           {
             "lord": "Ketu",
-            "start": "2012-12-14 22:40:20.036741",
-            "end": "2014-01-23 18:29:29.070341"
+            "start_date": "2043-04-03",
+            "end_date": "2050-04-03",
+            "duration_years": 7
           },
           {
             "lord": "Venus",
-            "start": "2014-01-23 18:29:29.070341",
-            "end": "2017-03-25 09:58:29.166341"
+            "start_date": "2050-04-03",
+            "end_date": "2070-04-03",
+            "duration_years": 20
           },
           {
             "lord": "Sun",
-            "start": "2017-03-25 09:58:29.166341",
-            "end": "2018-03-07 09:49:11.195141"
+            "start_date": "2070-04-03",
+            "end_date": "2076-04-02",
+            "duration_years": 6
           },
           {
             "lord": "Moon",
-            "start": "2018-03-07 09:49:11.195141",
-            "end": "2019-10-06 17:33:41.243141"
+            "start_date": "2076-04-02",
+            "end_date": "2086-04-03",
+            "duration_years": 10
           },
           {
             "lord": "Mars",
-            "start": "2019-10-06 17:33:41.243141",
-            "end": "2020-11-14 13:22:50.276741"
+            "start_date": "2086-04-03",
+            "end_date": "2093-04-02",
+            "duration_years": 7
           },
           {
             "lord": "Rahu",
-            "start": "2020-11-14 13:22:50.276741",
-            "end": "2023-09-21 12:54:56.363141"
+            "start_date": "2093-04-02",
+            "end_date": "2111-04-04",
+            "duration_years": 18
           },
           {
             "lord": "Jupiter",
-            "start": "2023-09-21 12:54:56.363141",
-            "end": "2026-04-03 20:30:08.439941"
+            "start_date": "2111-04-04",
+            "end_date": "2127-04-04",
+            "duration_years": 16
           }
-        ]
+        ],
+        "current_dasha": {
+          "mahadasha": {
+            "lord": "Saturn",
+            "start": "2007-04-03",
+            "end": "2026-04-03"
+          },
+          "antardasha": {
+            "lord": "Jupiter",
+            "start": "2023-09-21 05:29:27",
+            "end": "2026-04-03 12:14:06",
+            "is_current": true,
+            "type": "Antardasha"
+          },
+          "pratyantar_dasha": {
+            "lord": "Rahu",
+            "start": "2025-11-15 17:13:24",
+            "end": "2026-04-03 12:14:06",
+            "is_current": true,
+            "type": "Pratyantar Dasha"
+          },
+          "sookshma_dasha": {
+            "lord": "Jupiter",
+            "start": "2025-12-06 12:52:30",
+            "end": "2025-12-25 01:00:35",
+            "is_current": true,
+            "type": "Sookshma Dasha"
+          },
+          "prana_dasha": {
+            "lord": "Mars",
+            "start": "2025-12-21 04:28:53",
+            "end": "2025-12-22 06:23:22",
+            "is_current": true,
+            "type": "Prana Dasha"
+          }
+        },
+        "note": "Calculation uses standard 365.2425 day year for accuracy matching AstroSage."
       }
     },
     "nakshatra": {
@@ -4382,22 +4406,43 @@
       "raja_yogas": [
         {
           "name": "Parivartana Yoga (Jupiter-Venus)",
-          "description": "Exchange of signs between Jupiter and Venus. Strengthens both houses."
+          "description": "Exchange of signs between Jupiter and Venus. Strengthens both houses.",
+          "because": [
+            "Jupiter is in Venus's sign",
+            "Venus is in Jupiter's sign",
+            "Mutual exchange of signs detected"
+          ],
+          "textual_source": "Phaladeepika Ch. 6, Sl. 32"
         },
         {
           "name": "Bhadra Yoga",
-          "description": "Pancha Mahapurusha: Mercury strong in Kendra."
+          "description": "Pancha Mahapurusha: Mercury strong in Kendra.",
+          "because": [
+            "Mercury is in House 7 (a Kendra house)",
+            "Mercury is Own Sign in Gemini"
+          ],
+          "textual_source": "Brihat Parashara Hora Shastra"
         },
         {
           "name": "Malavya Yoga",
-          "description": "Pancha Mahapurusha: Venus strong in Kendra."
+          "description": "Pancha Mahapurusha: Venus strong in Kendra.",
+          "because": [
+            "Venus is in House 4 (a Kendra house)",
+            "Venus is Exalted in Pisces"
+          ],
+          "textual_source": "Brihat Parashara Hora Shastra"
         }
       ],
       "dhana_yogas": [],
       "other_yogas": [
         {
           "name": "Amala Yoga (from Moon)",
-          "description": "Benefic Venus in 10th from Moon. Reputation and career success."
+          "description": "Benefic Venus in 10th from Moon. Reputation and career success.",
+          "because": [
+            "Venus is a benefic planet",
+            "Venus is in the 10th House from Moon (House 4)"
+          ],
+          "textual_source": "Phaladeepika Ch. 6, Sl. 12"
         }
       ]
     },
@@ -4405,7 +4450,12 @@
       "manglik": {
         "present": true,
         "type": "High",
-        "description": "Mars in house 1"
+        "description": "Mars in house 1 causes Mangal Dosha.",
+        "because": [
+          "Mars is positioned in House 1",
+          "Standard Rule: Mars in 1, 2, 4, 7, 8, or 12"
+        ],
+        "textual_source": "Brihat Parashara Hora Shastra"
       },
       "kaal_sarp": {
         "present": false,
@@ -5251,55 +5301,55 @@
     "current_transits": {
       "Sun": {
         "current_sign": "Sagittarius",
-        "current_degree": 6.28872807277293,
+        "current_degree": 6.34815008629914,
         "house_from_birth_moon": 7,
         "is_retrograde": false
       },
       "Moon": {
         "current_sign": "Sagittarius",
-        "current_degree": 29.2061371913482,
+        "current_degree": 29.9232897431237,
         "house_from_birth_moon": 7,
         "is_retrograde": false
       },
       "Mars": {
         "current_sign": "Sagittarius",
-        "current_degree": 10.9346376808451,
+        "current_degree": 10.9789383650377,
         "house_from_birth_moon": 7,
         "is_retrograde": false
       },
       "Mercury": {
         "current_sign": "Scorpio",
-        "current_degree": 19.6930896591762,
+        "current_degree": 19.777857871418,
         "house_from_birth_moon": 6,
         "is_retrograde": false
       },
       "Jupiter": {
         "current_sign": "Gemini",
-        "current_degree": 28.3659859279138,
+        "current_degree": 28.3591559844632,
         "house_from_birth_moon": 1,
         "is_retrograde": false
       },
       "Venus": {
         "current_sign": "Sagittarius",
-        "current_degree": 2.5600833978919,
+        "current_degree": 2.63351218032469,
         "house_from_birth_moon": 7,
         "is_retrograde": false
       },
       "Saturn": {
         "current_sign": "Pisces",
-        "current_degree": 1.44831984524529,
+        "current_degree": 1.45078703583295,
         "house_from_birth_moon": 10,
         "is_retrograde": false
       },
       "Rahu": {
         "current_sign": "Aquarius",
-        "current_degree": 18.4720917014646,
+        "current_degree": 18.4690005022338,
         "house_from_birth_moon": 9,
         "is_retrograde": false
       },
       "Ketu": {
         "current_sign": "Leo",
-        "current_degree": 18.4720917014646,
+        "current_degree": 18.4690005022338,
         "house_from_birth_moon": 3,
         "is_retrograde": false
       }

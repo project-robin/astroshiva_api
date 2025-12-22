@@ -146,6 +146,36 @@ class AstroEngine:
                 divisional_charts = self._extract_divisional_charts(chart, charts_filter=charts)
             
             # Extract and format output
+            # Meta-Tagging (Phase 5 - Institutional Confidence)
+            engine_meta = {
+                 "api_version": "2.4.0",
+                 "calculation_engine": {
+                     "name": "AstroShiva Engine",
+                     "version": "v2.4.0-superiority",
+                     "framework": "SwissEphemeris + Parashara Light Logic"
+                 },
+                 "ayanamsa": {
+                     "id": "LAHIRI",
+                     "name": "Lahiri (Chitra Paksha)",
+                     "value_dms": "Calculated dynamically"
+                 },
+                 "features": [
+                     "5-Level Deep Dasha (Prana)", 
+                     "Interpretive Traceability (Yogas/Doshas)", 
+                     "Sidereal Varga Engine (D1-D60)", 
+                     "Prastharashtakavarga (8x12 Matrix)",
+                     "KP Methodology (Sub-Sub Lord)",
+                     "Shadbala Breakdown (6-Fold Strength)"
+                 ],
+                 "content_map": {
+                     "core": ["user_details", "astronomical_details", "sunrise_sunset"],
+                     "charts": ["divisional_charts", "kp_cusps"],
+                     "analysis": ["yogas", "doshas", "favorable_points"],
+                     "timing": ["dashas", "transits", "panchang"],
+                     "strength": ["balas", "avasthas"]
+                 }
+            }
+            
             output = {
                 "user_details": {
                     "name": name,
@@ -157,6 +187,7 @@ class AstroEngine:
                     "timezone_offset": tz_offset,
                     "generated_at": datetime.now().isoformat()
                 },
+                "meta": engine_meta,
                 "divisional_charts": divisional_charts,
                 "balas": self._extract_balas(chart),
                 "dashas": self._extract_dashas(chart, birth_datetime=birth_datetime),
@@ -165,14 +196,8 @@ class AstroEngine:
                 "favorable_points": self._calculate_favorable_points(chart),
                 "yogas": self._extract_yogas(chart),
                 "doshas": self._calculate_doshas(chart),
-                "meta": {
-                     "api_version": "2.3.0",
-                     "calculation_method": "swisseph_parashara",
-                     "ayanamsa": "Lahiri",
-                     "engine": "astro-shiva-engine-v2.3",
-                     "features": ["Jaimini", "KP", "Avasthas", "Transits", "Custom Varga Engine", 
-                                  "Astronomical Details", "KP Cusps", "Yogini Dasha", "Char Dasha", "Bhavabala"]
-                }
+                "yogas": self._extract_yogas(chart),
+                "doshas": self._calculate_doshas(chart)
             }
             
             # Add Phase 1 enhancements: Astronomical Details, Sunrise/Sunset, KP Cusps
@@ -1263,8 +1288,19 @@ class AstroEngine:
             'Saturn': 0.034, 'Rahu': 0.053, 'Ketu': 0.053
         }.get(planet_name, 1.0)
     
+
+    def _sanitize_shadbala(self, data):
+        """Recursively convert numpy types to native Python types"""
+        if hasattr(data, 'item'):  # Numpy scalars
+            return data.item()
+        if isinstance(data, dict):
+            return {k: self._sanitize_shadbala(v) for k, v in data.items()}
+        if isinstance(data, list):
+            return [self._sanitize_shadbala(v) for v in data]
+        return data
+
     def _extract_balas(self, chart) -> Dict[str, Any]:
-        """Extract Shadbala and Ashtakavarga"""
+        """Extract Shadbala and Ashtakavarga with Sanitation"""
         balas = {
             "shadbala": {},
             "ashtakavarga": {}
@@ -1274,7 +1310,9 @@ class AstroEngine:
             # Extract Shadbala for each planet
             for planet in chart.d1_chart.planets:
                 if hasattr(planet, 'shadbala') and planet.shadbala:
-                    balas['shadbala'][planet.celestial_body] = planet.shadbala
+                    # Sanitize to remove numpy types (e.g. np.float64)
+                    raw_bala = planet.shadbala
+                    balas['shadbala'][planet.celestial_body] = self._sanitize_shadbala(raw_bala)
             
             # Extract Ashtakavarga
             if hasattr(chart, 'ashtakavarga') and chart.ashtakavarga:
