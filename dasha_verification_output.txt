@@ -1,0 +1,14 @@
+Running Dasha Extraction...
+
+--- Current Dasha Stack ---
+Level 1 (mahadasha): Mars [2023-01-01 - 2029-12-31]
+Level 2 (antardasha): Saturn [2025-05-23 14:46:46 - 2026-07-02 10:13:47]
+Level 3 (pratyantar_dasha): Sun [2025-12-22 03:23:27 - 2026-01-11 09:09:48]
+Level 4 (sookshma_dasha): Sun [2025-12-22 03:23:27 - 2025-12-23 03:40:46]
+Level 5 (prana_dasha): Rahu [2025-12-22 08:02:46 - 2025-12-22 11:41:21]
+
+SUCCESS: Full 5-Level Depth Achieved!
+
+--- Lifetime Mahadashas ---
+Generated 10 Mahadashas.
+First: {'lord': 'Venus', 'start_date': '2000-01-01', 'end_date': '2007-01-01', 'duration_years': 7.0}
