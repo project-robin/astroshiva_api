@@ -200,7 +200,8 @@ class AstroEngine:
                     if isinstance(raw_data, dict):
                         output["bhavabala"] = self._extract_bhavabala(raw_data, d1_obj)
                     else:
-                        output["bhavabala"] = {"note": "Bhavabala requires jyotishganit chart data"}
+                        # Fallback to manual extraction/calculation if dicts are missing
+                        output["bhavabala"] = self._extract_bhavabala({}, d1_obj)
                 
                 # Get Moon degree for Yogini Dasha
                 moon_degree = None
