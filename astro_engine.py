@@ -1927,6 +1927,16 @@ class AstroEngine:
         """
         try:
             bhavabala = {}
+            # Initialize with zero values to ensure UI doesn't break
+            for i in range(12):
+                bhavabala[f"house_{i+1}"] = {
+                    "total": 0,
+                    "adhipathi_bala": 0,
+                    "dig_bala": 0,
+                    "drishti_bala": 0,
+                    "rank": 0
+                }
+
             # FIX: Try multiple access paths for jyotishganit structure variations (camelCase and snake_case)
             balas = chart_data.get("Balas") or chart_data.get("balas") or {}
             bhava_data = balas.get("BhavaBala") or balas.get("bhava_bala") or balas.get("bhavabala") or {}
@@ -1942,12 +1952,12 @@ class AstroEngine:
                 drishtibala = bhava_data.get("BhavaDrishtibala") or bhava_data.get("bhava_drishti_bala") or [0]*12
                 
                 for i in range(12):
-                    bhavabala[f"house_{i+1}"] = {
+                    bhavabala[f"house_{i+1}"].update({
                         "total": round(totals[i] if i < len(totals) else 0, 2),
                         "adhipathi_bala": round(adhipathi[i] if i < len(adhipathi) else 0, 2),
                         "dig_bala": round(digbala[i] if i < len(digbala) else 0, 2),
                         "drishti_bala": round(drishtibala[i] if i < len(drishtibala) else 0, 2)
-                    }
+                    })
                 
                 # Calculate rankings
                 if totals:
@@ -1955,6 +1965,10 @@ class AstroEngine:
                     for rank, house_idx in enumerate(sorted_houses, 1):
                         bhavabala[f"house_{house_idx+1}"]["rank"] = rank
             
+            # If no data found, add a note but keep structure
+            if not bhava_data:
+                 bhavabala["note"] = "Bhavabala calculation requires extended planetary strength data which is currently unavailable."
+
             return bhavabala
             
         except Exception as e:
@@ -2216,26 +2230,63 @@ class AstroEngine:
                 """
                 lord_sign = get_lord_sign(sign_idx)
                 
+            # Method: KN Rao's Chara Dasha System
+            # Direct Group (Count Forward): Aries, Taurus, Gemini, Libra, Scorpio, Sagittarius
+            # Indirect Group (Count Backward): Cancer, Leo, Virgo, Capricorn, Aquarius, Pisces
+            direct_group = [0, 1, 2, 6, 7, 8]  # Ari, Tau, Gem, Lib, Sco, Sag
+            # Indirect is everyone else
+            
+            def get_dasha_duration(sign_idx: int) -> int:
+                """
+                Calculate dasha duration using KN Rao's Chara Dasha rules.
+                """
+                lord_sign = get_lord_sign(sign_idx)
+                
                 # If lord is in its own sign, duration is 12
+                # Exception: Some schools say 12, some say 0->12. KN Rao usually 12.
                 if lord_sign == sign_idx:
                     return 12
                 
-                if sign_idx in odd_signs:
-                    # Odd sign: count forward
-                    distance = (lord_sign - sign_idx) % 12
+                if sign_idx in direct_group:
+                    # Count Forward
+                    count = (lord_sign - sign_idx) % 12
                 else:
-                    # Even sign: count backward
-                    distance = (sign_idx - lord_sign) % 12
+                    # Count Backward
+                    count = (sign_idx - lord_sign) % 12
                 
-                # Duration = distance + 1 (minimum 1 year NOT enforced by strict Jaimini, but usually is)
-                # Correction: Jaimini Sutra says (Distance - 1). Wait.
-                # Common interpretation: "Count from sign to lord".
-                # If Lord is in 2nd house from sign, count is 2. Years = 2 (or 2-1=1).
-                # AstroSage: SCO (Lord Mars/Ketu). If Mars in Sag (2nd from Sco).
-                # Sequence: Sco (12y) -> Lib (6y).
-                # Let's stick to the current "distance + 1" formula but fix the LORD position first.
-                return max(distance, 1) # Actually distance is 0-11. Count is 1-12. So distance+1 is correct count.
-                # However, many schools deduct 1. Let's start with count.
+                # Correction: Count includes the starting sign?
+                # Usually: Count from Sign to Lord.
+                # Example: Exo (Scorpio) -> Mars in Sag.
+                # Forward: Sco(1), Sag(2). Count = 2.
+                # KN Rao Rule: Subtract 1 from the count.
+                # Years = Count - 1.
+                # Exception: If Count is 1 (Lord in sign), 12 years.
+                # If Count is 0? Impossible if lord_sign == sign_idx handled.
+                
+                # Let's verify with AstroSage data:
+                # SAG (Direct) -> Jupiter in Tau.
+                # Sag(8) -> Tau(1). Forward: 9,10,11,0,1. (5 steps).
+                # Years = 5. Matches! (Count - 1? No, 5 steps is distance 5. 8+5=13=1.)
+                # Wait: (1 - 8) % 12 = 5.
+                # So if formula is (lord - sign) % 12, result is 5.
+                # Years = 5.
+                
+                # SCO (Direct) -> Mars in Sag.
+                # Sco(7) -> Sag(8). Forward.
+                # (8 - 7) % 12 = 1.
+                # Years = 1. Matches!
+                
+                # LEO (Indirect) -> Sun in Tau.
+                # Leo(4) -> Tau(1). Backward.
+                # (4 - 1) % 12 = 3.
+                # Years = 3. Matches!
+                
+                # Conclusion: Formula is exactly (diff) % 12. No +1 or -1 needed if using modulo distance.
+                # Just handle 0 case (own sign) = 12.
+                
+                if count == 0:
+                    return 12
+                return count
             
             def get_dasha_sequence(lagna_idx: int) -> list:
                 """
