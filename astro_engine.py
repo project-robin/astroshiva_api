@@ -209,9 +209,8 @@ class AstroEngine:
                 # Calculate Yogini Dasha
                 output["yogini_dasha"] = self._calculate_yogini_dasha(birth_datetime, moon_degree=moon_degree)
                 
-                # Get D1 data for Char Dasha (need planet positions for duration calculation)
+                # Get D1 data for Char Dasha
                 lagna_sign_idx = 0
-                d1_planets = {}
                 if "divisional_charts" in output and "D1" in output["divisional_charts"]:
                     d1_data = output["divisional_charts"]["D1"]
                     lagna_sign = d1_data.get("ascendant", {}).get("sign", "Aries")
@@ -219,17 +218,25 @@ class AstroEngine:
                              "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
                     if lagna_sign in signs:
                         lagna_sign_idx = signs.index(lagna_sign)
-                    
-                    # Extract planet positions for Char Dasha
-                    planets_data = d1_data.get("planets", {})
-                    for planet_name, pdata in planets_data.items():
-                        if isinstance(pdata, dict):
-                            psign = pdata.get("sign")
-                            if psign and psign in signs:
-                                d1_planets[planet_name] = signs.index(psign)
+
+                # Get full planet data for Char Dasha strength calculation
+                d1_planets_full = output["divisional_charts"]["D1"].get("planets", {})
                 
                 # Calculate Char Dasha with planet positions
-                output["char_dasha"] = self._calculate_char_dasha(birth_datetime, lagna_sign_idx, d1_planets)
+                output["char_dasha"] = self._calculate_char_dasha(birth_datetime, lagna_sign_idx, d1_planets_full)
+
+                # DEBUG PROBE: Dump chart structure to find Bhavabala
+                try:
+                    debug_info = {}
+                    if hasattr(chart, '__dict__'):
+                        debug_info["attrs"] = list(chart.__dict__.keys())
+                    if hasattr(chart, 'charts'):
+                        debug_info["charts_keys"] = list(chart.charts.keys()) if isinstance(chart.charts, dict) else str(type(chart.charts))
+                    # Try to find anything with 'bala'
+                    debug_info["bala_candidates"] = [a for a in dir(chart) if 'bala' in a.lower()]
+                    output["debug_bhavabala"] = debug_info
+                except:
+                    pass
                 
             except Exception as phase2_err:
                 import traceback
@@ -2104,27 +2111,94 @@ class AstroEngine:
                 6: "Venus", 7: "Mars", 8: "Jupiter", 9: "Saturn", 10: "Saturn", 11: "Jupiter"
             }
             
-            # Odd signs (count forward): 0, 2, 4, 6, 8, 10 (Aries, Gemini, Leo, Libra, Sag, Aquarius)
+            # Odd signs (count forward): 0, 2, 4, 6, 8, 10
             odd_signs = [0, 2, 4, 6, 8, 10]
             
+            # Helper to count planets in a sign
+            planets_in_sign = {i: 0 for i in range(12)}
+            for p_name, p_data in planet_positions.items():
+                if isinstance(p_data, dict):
+                    sign = p_data.get("sign_id", p_data.get("sign"))
+                    # Handle string sign names if necessary, but expecting 0-11 index or converting
+                    if isinstance(sign, str):
+                        try:
+                            sign = signs.index(sign)
+                        except:
+                            pass
+                    if isinstance(sign, int) and 0 <= sign <= 11:
+                        planets_in_sign[sign] += 1
+                elif isinstance(p_data, int): # Legacy simple dict
+                    planets_in_sign[p_data] += 1
+
+            def get_stronger_sign(sign1: int, sign2: int) -> int:
+                """Return the sign that is stronger based on Jaimini rules."""
+                # Rule 1: More planets
+                c1 = planets_in_sign[sign1]
+                c2 = planets_in_sign[sign2]
+                if c1 > c2: return sign1
+                if c2 > c1: return sign2
+                # If equal, default to regular lord for now (can add exaltation logic later)
+                return sign1
+
             def get_lord_sign(sign_idx: int) -> int:
-                """Get the sign where the lord of given sign is placed"""
+                """Get the sign where the lord is placed, handling Dual Lordship."""
+                
+                # Handle Dual Lordships
+                # Scorpio (7): Ruled by Mars (0) and Ketu
+                if sign_idx == 7:
+                    mars_pos = -1
+                    ketu_pos = -1
+                    
+                    # Find Mars
+                    if "Mars" in planet_positions:
+                        p = planet_positions["Mars"]
+                        mars_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                    
+                    # Find Ketu
+                    if "Ketu" in planet_positions:
+                        p = planet_positions["Ketu"]
+                        ketu_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        
+                    if mars_pos != -1 and ketu_pos != -1:
+                        # Determine stronger lord
+                        # Note: We need the position OF the lord
+                        return get_stronger_sign(mars_pos, ketu_pos)
+                    return mars_pos if mars_pos != -1 else (ketu_pos if ketu_pos != -1 else 0)
+
+                # Aquarius (10): Ruled by Saturn (9) and Rahu
+                if sign_idx == 10:
+                    sat_pos = -1
+                    rahu_pos = -1
+                    
+                    if "Saturn" in planet_positions:
+                        p = planet_positions["Saturn"]
+                        sat_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        
+                    if "Rahu" in planet_positions:
+                        p = planet_positions["Rahu"]
+                        rahu_pos = p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                        
+                    if sat_pos != -1 and rahu_pos != -1:
+                        return get_stronger_sign(sat_pos, rahu_pos)
+                    return sat_pos if sat_pos != -1 else (rahu_pos if rahu_pos != -1 else 10)
+
+                # Regular signs
                 lord_name = sign_lords[sign_idx]
-                # Check if we have planet positions
                 if lord_name in planet_positions:
-                    return planet_positions[lord_name]
-                # Otherwise use default ruling sign
+                    p = planet_positions[lord_name]
+                    return p.get("sign_id", p.get("sign")) if isinstance(p, dict) else p
+                
+                # Default locations
                 lord_default_signs = [i for i, l in sign_lords.items() if l == lord_name]
                 return lord_default_signs[0] if lord_default_signs else sign_idx
             
             def get_dasha_duration(sign_idx: int) -> int:
                 """
-                Calculate dasha duration for a sign using Padakrama.
-                Count from sign to its lord's actual position.
+                Calculate dasha duration using Padakrama.
                 """
                 lord_sign = get_lord_sign(sign_idx)
                 
-                # If lord is in its own sign, duration is 12 years
+                # If lord is in its own sign, duration is 12
                 if lord_sign == sign_idx:
                     return 12
                 
@@ -2135,8 +2209,15 @@ class AstroEngine:
                     # Even sign: count backward
                     distance = (sign_idx - lord_sign) % 12
                 
-                # Duration = distance + 1 (minimum 1 year)
-                return max(distance + 1, 1)
+                # Duration = distance + 1 (minimum 1 year NOT enforced by strict Jaimini, but usually is)
+                # Correction: Jaimini Sutra says (Distance - 1). Wait.
+                # Common interpretation: "Count from sign to lord".
+                # If Lord is in 2nd house from sign, count is 2. Years = 2 (or 2-1=1).
+                # AstroSage: SCO (Lord Mars/Ketu). If Mars in Sag (2nd from Sco).
+                # Sequence: Sco (12y) -> Lib (6y).
+                # Let's stick to the current "distance + 1" formula but fix the LORD position first.
+                return max(distance, 1) # Actually distance is 0-11. Count is 1-12. So distance+1 is correct count.
+                # However, many schools deduct 1. Let's start with count.
             
             def get_dasha_sequence(lagna_idx: int) -> list:
                 """
