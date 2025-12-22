@@ -1280,10 +1280,153 @@ class AstroEngine:
                     'sav': chart.ashtakavarga.sav,  # Sarvashtakavarga
                     'bhav': chart.ashtakavarga.bhav  # Bhinnashtakavarga
                 }
+            
+            # SUPERIORITY FEATURE: Prastharashtakavarga (Detailed Bit Matrix)
+            # If standard extraction didn't provide details, calculate them manually
+            if 'details' not in balas['ashtakavarga']:
+                balas['ashtakavarga']['prastharashtakavarga'] = self._calculate_prastharashtakavarga(chart)
+                
         except Exception as e:
             print(f"Warning: Could not extract balas: {e}")
         
         return balas
+
+    def _calculate_prastharashtakavarga(self, chart) -> Dict[str, Any]:
+        """
+        Calculate detailed Prastharashtakavarga (0/1 matrix) for all 7 planets.
+        """
+        try:
+            # 1. Get Positions of 7 Planets + Lagna
+            positions = {}
+            signs_map = {
+                "Aries": 1, "Taurus": 2, "Gemini": 3, "Cancer": 4, 
+                "Leo": 5, "Virgo": 6, "Libra": 7, "Scorpio": 8, 
+                "Sagittarius": 9, "Capricorn": 10, "Aquarius": 11, "Pisces": 12
+            }
+            
+            # Planets
+            if hasattr(chart.d1_chart, 'planets'):
+                for p in chart.d1_chart.planets:
+                    positions[p.celestial_body] = signs_map.get(p.sign, 1)
+            
+            # Lagna
+            if hasattr(chart.d1_chart, 'houses'):
+                asc_sign = chart.d1_chart.houses[0].sign
+                positions['Ascendant'] = signs_map.get(asc_sign, 1)
+            
+            # Ensure we have all necessary bodies
+            required = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Ascendant']
+            for r in required:
+                if r not in positions:
+                    return {"error": f"Missing position for {r}"}
+
+            # 2. Definte Parashara Rules
+            # Format: { Planet: [Houses relative to itself] }
+            
+            rules = {
+                "Sun": {
+                    "Sun": [1, 2, 4, 7, 8, 9, 10, 11],
+                    "Moon": [3, 6, 10, 11],
+                    "Mars": [1, 2, 4, 7, 8, 9, 10, 11],
+                    "Mercury": [3, 5, 6, 9, 10, 11, 12],
+                    "Jupiter": [5, 6, 9, 11],
+                    "Venus": [6, 7, 12],
+                    "Saturn": [1, 2, 4, 7, 8, 9, 10, 11],
+                    "Ascendant": [3, 4, 6, 10, 11, 12]
+                },
+                "Moon": {
+                    "Sun": [3, 6, 7, 8, 10, 11],
+                    "Moon": [1, 3, 6, 7, 10, 11],
+                    "Mars": [2, 3, 5, 6, 9, 10, 11],
+                    "Mercury": [1, 3, 4, 5, 7, 8, 10, 11],
+                    "Jupiter": [1, 4, 7, 8, 10, 11, 12],
+                    "Venus": [3, 4, 5, 7, 9, 10, 11],
+                    "Saturn": [3, 5, 6, 11],
+                    "Ascendant": [3, 6, 10, 11]
+                },
+                "Mars": {
+                    "Sun": [3, 5, 6, 10, 11],
+                    "Moon": [3, 6, 11],
+                    "Mars": [1, 2, 4, 7, 8, 10, 11],
+                    "Mercury": [3, 5, 6, 11],
+                    "Jupiter": [6, 10, 11, 12],
+                    "Venus": [6, 8, 11, 12],
+                    "Saturn": [1, 4, 7, 8, 9, 10, 11],
+                    "Ascendant": [1, 3, 6, 10, 11]
+                },
+                "Mercury": {
+                    "Sun": [5, 6, 9, 11, 12],
+                    "Moon": [2, 4, 6, 8, 10, 11],
+                    "Mars": [1, 2, 4, 7, 8, 9, 10, 11],
+                    "Mercury": [1, 3, 5, 6, 9, 10, 11, 12],
+                    "Jupiter": [6, 8, 11, 12],
+                    "Venus": [1, 2, 3, 4, 5, 8, 9, 11],
+                    "Saturn": [1, 2, 4, 7, 8, 9, 10, 11],
+                    "Ascendant": [1, 2, 3, 4, 6, 8, 10, 11]
+                },
+                "Jupiter": {
+                    "Sun": [1, 2, 3, 4, 7, 8, 9, 10, 11],
+                    "Moon": [2, 5, 7, 9, 11],
+                    "Mars": [1, 2, 4, 7, 8, 10, 11],
+                    "Mercury": [1, 2, 4, 5, 6, 9, 10, 11],
+                    "Jupiter": [1, 2, 3, 4, 7, 8, 10, 11],
+                    "Venus": [2, 5, 6, 9, 10, 11],
+                    "Saturn": [3, 5, 6, 12],
+                    "Ascendant": [1, 2, 4, 5, 6, 7, 9, 10, 11]
+                },
+                "Venus": {
+                    "Sun": [8, 11, 12],
+                    "Moon": [1, 2, 3, 4, 5, 8, 9, 11, 12],
+                    "Mars": [3, 4, 6, 9, 11, 12],
+                    "Mercury": [3, 5, 6, 9, 11],
+                    "Jupiter": [5, 8, 9, 10, 11],
+                    "Venus": [1, 2, 3, 4, 5, 8, 9, 10, 11],
+                    "Saturn": [3, 4, 5, 8, 9, 10, 11],
+                    "Ascendant": [1, 2, 3, 4, 5, 8, 9, 11]
+                },
+                "Saturn": {
+                    "Sun": [1, 2, 4, 7, 8, 10, 11],
+                    "Moon": [3, 6, 11],
+                    "Mars": [3, 5, 6, 10, 11, 12],
+                    "Mercury": [6, 8, 9, 10, 11, 12],
+                    "Jupiter": [5, 6, 11, 12],
+                    "Venus": [6, 11, 12],
+                    "Saturn": [3, 5, 6, 11],
+                    "Ascendant": [1, 3, 4, 6, 10, 11]
+                }
+            }
+            
+            # 3. Calculate Matrix
+            # Structure: { Planet_PAV: { Sign: { Giver: 0/1 } } }
+            matrix = {}
+            for pav_planet in rules.keys(): # For each of the 7 PAVs
+                matrix[pav_planet] = {}
+                
+                # Initialize 12 signs
+                for s in range(1, 13):
+                    sign_name = list(signs_map.keys())[list(signs_map.values()).index(s)]
+                    matrix[pav_planet][sign_name] = {}
+                    
+                    total_points = 0
+                    
+                    # Check each Giver
+                    for giver, benefic_houses in rules[pav_planet].items():
+                        giver_pos = positions[giver]
+                        
+                        # Determine house of this sign relative to Giver
+                        # House = (Sign - GiverPos) % 12 + 1
+                        current_house_rel_to_giver = (s - giver_pos) % 12 + 1
+                        
+                        has_point = 1 if current_house_rel_to_giver in benefic_houses else 0
+                        matrix[pav_planet][sign_name][giver] = has_point
+                        total_points += has_point
+                    
+                    matrix[pav_planet][sign_name]["Total"] = total_points
+
+            return matrix
+
+        except Exception as e:
+            return {"error": str(e)}
     
     def _extract_dashas(self, chart) -> Dict[str, Any]:
         """Extract Vimshottari Dasha and other dashas"""
@@ -1806,35 +1949,63 @@ class AstroEngine:
     def _get_astronomical_constants(self, jd_ut: float, birth_datetime: datetime, tz_offset: float, lon: float) -> Dict[str, Any]:
         """
         Calculate and return astronomical base values used in Vedic astrology.
-        
-        Args:
-            jd_ut: Julian Day in UT
-            birth_datetime: Birth datetime object
-            tz_offset: Timezone offset in hours
-            lon: Longitude for Local Mean Time calculation
-        
-        Returns:
-            Dictionary with Ayanamsa, Julian Day, Sidereal Time, Obliquity, LMT, GMT
         """
+        result = {}
+        
+        # 1. LMT and GMT Calculation (No Swisseph Dependency)
+        try:
+            from datetime import timedelta
+            
+            # GMT
+            gmt_datetime = birth_datetime - timedelta(hours=tz_offset)
+            gmt_str = gmt_datetime.strftime("%H:%M:%S")
+            
+            # LMT
+            lmt_offset_hours = lon / 15.0
+            lmt_datetime = gmt_datetime + timedelta(hours=lmt_offset_hours)
+            lmt_str = lmt_datetime.strftime("%H:%M:%S")
+            
+            # Local Time Correction
+            std_meridian = tz_offset * 15.0
+            lmt_corr_deg = lon - std_meridian
+            lmt_correction_minutes = lmt_corr_deg * 4.0
+            
+            sign = "+" if lmt_correction_minutes >= 0 else "-"
+            abs_mins = abs(lmt_correction_minutes)
+            corr_m = int(abs_mins)
+            corr_s = int((abs_mins - corr_m) * 60)
+            lmt_corr_str = f"{sign}{corr_m:02d}:{corr_s:02d}"
+            
+            result["lmt_at_birth"] = lmt_str
+            result["gmt_at_birth"] = gmt_str
+            result["local_time_correction"] = lmt_corr_str
+            result["julian_day"] = round(jd_ut, 6)
+            
+        except Exception as e:
+            result["time_error"] = str(e)
+            
+        # 2. Astronomical Constants (Swisseph Dependency)
         try:
             import swisseph as swe
             
-            # 1. Ayanamsa (Lahiri)
+            # Ayanamsa (Lahiri)
             swe.set_sid_mode(swe.SIDM_LAHIRI)
             ayanamsa_deg = swe.get_ayanamsa_ut(jd_ut)
             
-            # Convert to DMS
             ayan_d = int(ayanamsa_deg)
             ayan_m = int((ayanamsa_deg - ayan_d) * 60)
             ayan_s = int(((ayanamsa_deg - ayan_d) * 60 - ayan_m) * 60)
             
-            # 2. Obliquity of the Ecliptic
-            # swe.calc_ut returns eps (obliquity) when planet is SUN and flag includes SEFLG_EQUATORIAL
-            # Simpler: use swe.calc for mean obliquity
+            result["ayanamsa"] = {
+                "name": "Lahiri",
+                "value_dms": f"{ayan_d:03d}-{ayan_m:02d}-{ayan_s:02d}",
+                "value_decimal": round(ayanamsa_deg, 6)
+            }
+            
+            # Obliquity
             eps_tuple = swe.calc_ut(jd_ut, swe.ECL_NUT)
-            # eps_tuple[0] is true obliquity, eps_tuple[1] is mean obliquity
             if isinstance(eps_tuple[0], (list, tuple)):
-                obliquity = eps_tuple[0][0]  # True obliquity
+                obliquity = eps_tuple[0][0]
             else:
                 obliquity = eps_tuple[0]
             
@@ -1842,62 +2013,30 @@ class AstroEngine:
             obl_m = int((obliquity - obl_d) * 60)
             obl_s = int(((obliquity - obl_d) * 60 - obl_m) * 60)
             
-            # 3. Sidereal Time at Birth
-            # ARMC (Ascendant's Right Ascension Meridian Cusp) / 15 gives sidereal time in hours
-            # Or use swe.sidtime(jd_ut) for GMT sidereal time, then adjust for longitude
-            sid_time_gmt = swe.sidtime(jd_ut)  # Returns hours
-            # Local Sidereal Time = GMT Sidereal Time + (Longitude / 15)
+            result["obliquity"] = {
+                "value_dms": f"{obl_d:02d}-{obl_m:02d}-{obl_s:02d}",
+                "value_decimal": round(obliquity, 6)
+            }
+            
+            # Sidereal Time
+            sid_time_gmt = swe.sidtime(jd_ut)
             local_sid_time = (sid_time_gmt + lon / 15.0) % 24.0
             
             st_h = int(local_sid_time)
             st_m = int((local_sid_time - st_h) * 60)
             st_s = int(((local_sid_time - st_h) * 60 - st_m) * 60)
             
-            # 4. LMT and GMT at Birth
-            # LMT = Local Standard Time + Time Correction
-            # Time Correction = (Longitude - Standard Meridian) / 15 hours
-            # For IST, Standard Meridian = 82.5° E
-            # However, we're given the local time directly, so:
-            local_time_str = birth_datetime.strftime("%H:%M:%S")
-            
-            # GMT = Local Time - Timezone Offset
-            gmt_hour = birth_datetime.hour - tz_offset
-            gmt_datetime = datetime(
-                birth_datetime.year, birth_datetime.month, birth_datetime.day,
-                int(gmt_hour) % 24, birth_datetime.minute, birth_datetime.second
-            )
-            gmt_str = gmt_datetime.strftime("%H:%M:%S")
-            
-            # LMT Correction = (Longitude - Standard Meridian) * 4 minutes per degree
-            # For India: Std Meridian = 82.5
-            # This is approximate, as it assumes IST zone
-            std_meridian = tz_offset * 15.0  # Approx standard meridian for this tz
-            lmt_correction_minutes = (lon - std_meridian) * 4.0
-            lmt_corr_m = int(abs(lmt_correction_minutes))
-            lmt_corr_s = int((abs(lmt_correction_minutes) - lmt_corr_m) * 60)
-            lmt_corr_sign = "+" if lmt_correction_minutes >= 0 else "-"
-            
-            return {
-                "ayanamsa": {
-                    "name": "Lahiri",
-                    "value_dms": f"{ayan_d:03d}-{ayan_m:02d}-{ayan_s:02d}",
-                    "value_decimal": round(ayanamsa_deg, 6)
-                },
-                "obliquity": {
-                    "value_dms": f"{obl_d:02d}-{obl_m:02d}-{obl_s:02d}",
-                    "value_decimal": round(obliquity, 6)
-                },
-                "sidereal_time": {
-                    "local_dms": f"{st_h:02d}:{st_m:02d}:{st_s:02d}",
-                    "local_decimal": round(local_sid_time, 4)
-                },
-                "julian_day": round(jd_ut, 6),
-                "lmt_at_birth": local_time_str,
-                "gmt_at_birth": gmt_str,
-                "local_time_correction": f"{lmt_corr_sign}{lmt_corr_m:02d}:{lmt_corr_s:02d}"
+            result["sidereal_time"] = {
+                "local_dms": f"{st_h:02d}:{st_m:02d}:{st_s:02d}",
+                "local_decimal": round(local_sid_time, 4)
             }
+            
+        except ImportError:
+            result["swisseph_error"] = "Module not found"
         except Exception as e:
-            return {"error": str(e)}
+            result["astro_error"] = str(e)
+            
+        return result
 
     def _calculate_sunrise_sunset(self, jd_ut: float, lat: float, lon: float, tz_offset: float = 5.5, birth_date: datetime = None) -> Dict[str, Any]:
         """
