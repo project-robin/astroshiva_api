@@ -8,10 +8,25 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: false
+
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 4
     steps:
-      - name: Ping health endpoint
-        run: curl --fail --silent --show-error --max-time 90 --retry 2 --retry-all-errors https://astroshiva-api.onrender.com/health
+      - name: Wake and verify health endpoint
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --connect-timeout 15 \
+            --max-time 90 \
+            --retry 5 \
+            --retry-delay 15 \
+            --retry-max-time 180 \
+            --write-out '\nhealth_status=%{http_code} total_seconds=%{time_total}\n' \
+            https://astroshiva-api.onrender.com/health
