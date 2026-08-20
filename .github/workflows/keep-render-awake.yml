@@ -14,4 +14,4 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: Ping health endpoint
-        run: curl --fail --silent --show-error --max-time 90 --retry 2 --retry-all-errors https://astroshiva-api.onrender.com/health
+        run: curl --fail --silent --show-error --connect-timeout 10 --max-time 20 --retry 8 --retry-delay 10 --retry-max-time 110 --retry-all-errors https://astroshiva-api.onrender.com/health
