@@ -1,4 +1,4 @@
-# Astro-Shiva API v2.0.0 - Complete Documentation
+# Astro-Shiva API v2.4.0 - Complete Documentation
 
 **Base URL:** `https://astroshiva-api.onrender.com`  
 **Protocol:** HTTPS  
@@ -79,7 +79,7 @@ Content-Type: application/json
   "status": "success",
   "data": {
     "meta": {
-      "api_version": "2.0.0",
+      "api_version": "2.4.0",
       "calculation_engine": "jyotishganit + swisseph",
       "ayanamsa": "Lahiri (Chitrapaksha)"
     },
@@ -120,19 +120,7 @@ curl "https://astroshiva-api.onrender.com/api/chart-get?name=John&dob=1990-05-15
 
 ---
 
-### 3. Test Endpoint
-**Pre-filled test data for quick verification.**
-
-**Endpoint:** `GET /api/chart-test`
-
-**Example:**
-```bash
-curl https://astroshiva-api.onrender.com/api/chart-test
-```
-
----
-
-### 4. Health Check
+### 3. Health Check
 **Verify API availability.**
 
 **Endpoint:** `GET /health`
@@ -170,7 +158,7 @@ curl https://astroshiva-api.onrender.com/api/chart-test
 ### Meta Information
 ```json
 "meta": {
-  "api_version": "2.0.0",
+  "api_version": "2.4.0",
   "calculation_engine": "jyotishganit + swisseph",
   "ayanamsa": "Lahiri (Chitrapaksha)",
   "timestamp": "2023-10-27T10:00:00"
@@ -509,7 +497,14 @@ Fair use policy:
 
 ## Version History
 
-### v2.0.0 (Current)
+### v2.4.0 (Current)
+- Corrected Parashara mappings and ascendants across all 16 supported vargas
+- Aligned Vimshottari calculations with the returned Swiss-Ephemeris Moon longitude
+- Made coordinates and historical timezone offset strict accuracy inputs
+- Bundled astronomical data for deterministic offline startup
+- Pinned the tested Python 3.11 dependency set
+
+### v2.0.0
 - Added Jaimini Karakas
 - Added Planetary Avasthas (Baaladi, Jagradadi)
 - Added KP System (Sub-Lord, Sub-Sub-Lord)
@@ -529,5 +524,4 @@ Fair use policy:
 
 ## License
 
-**Free to use** for personal and commercial projects.  
-Attribution appreciated but not required.
+Swiss Ephemeris requires either AGPL compliance or a paid professional license. The repository does not currently declare a project license. Do not treat this API as unrestricted commercial software until the project owner has chosen and documented the applicable license.

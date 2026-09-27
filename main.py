@@ -1,11 +1,10 @@
 """
-Main application - Free Vedic Astrology using jyotishyamitra
+Command-line interface for the AstroShiva calculation engine
 No external API calls - 100% local and offline
 """
 
 import json
 import argparse
-from datetime import datetime
 from pathlib import Path
 from astro_engine import AstroEngine
 
@@ -22,6 +21,7 @@ def main():
     parser.add_argument("--place", type=str, help="Place of birth")
     parser.add_argument("--lat", type=float, help="Latitude coordinate")
     parser.add_argument("--lon", type=float, help="Longitude coordinate")
+    parser.add_argument("--timezone", type=str, help="UTC offset (for example +5:30 or -5)")
     parser.add_argument("--chart", type=str, help="Specific chart to generate (e.g., D9, D10)")
     parser.add_argument("--output", type=str, help="Output file path (JSON)")
     parser.add_argument("--test", action="store_true", help="Run test calculation")
@@ -39,7 +39,8 @@ def main():
             tob="12:30:00",
             place="New York",
             latitude=40.7128,
-            longitude=-74.0060
+            longitude=-74.0060,
+            timezone="-5",
         )
         
         print("✅ Test calculation successful!")
@@ -56,9 +57,9 @@ def main():
         return
     
     # Validate required arguments
-    if not all([args.name, args.dob, args.tob, args.place]):
+    if not all([args.name, args.dob, args.tob, args.place, args.timezone]) or args.lat is None or args.lon is None:
         parser.print_help()
-        print("\nError: --name, --dob, --tob, and --place are required")
+        print("\nError: --name, --dob, --tob, --place, --lat, --lon, and --timezone are required")
         return
     
     try:
@@ -70,13 +71,15 @@ def main():
             tob=args.tob,
             place=args.place,
             latitude=args.lat,
-            longitude=args.lon
+            longitude=args.lon,
+            timezone=args.timezone,
+            charts=[args.chart] if args.chart else None,
         )
         
         # Get specific chart if requested
         if args.chart:
             print(f"Extracting {args.chart} chart...")
-            chart_data = engine.get_divisional_chart(args.chart)
+            chart_data = chart["divisional_charts"][args.chart.upper()]
             output = {
                 "chart_type": args.chart,
                 "data": chart_data

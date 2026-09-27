@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+
+# ponytail: generated diagnostics belong in /tmp, not source control.
+*_output.json
+debug_output.json
+temp_api_response.json
+verify_*.json
+d9_output.txt
+dasha*_output.txt
+test_results.txt
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

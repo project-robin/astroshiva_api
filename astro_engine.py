@@ -5,10 +5,24 @@ Uses jyotishganit for 100% free, local, offline calculations
 
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 from jyotishganit import calculate_birth_chart, get_birth_chart_json
-import math
+from jyotishganit.core import astronomical
+from skyfield.api import Loader
+
+
+# Keep production calculations offline and deterministic. jyotishganit's
+# default loaders otherwise download these files into a per-user cache.
+ASTRONOMY_DATA_DIR = Path(__file__).resolve().parent / "astronomy_data"
+astronomical.loader = Loader(str(ASTRONOMY_DATA_DIR), verbose=False)
+astronomical.load = astronomical.loader
+
+SUPPORTED_CHARTS = {
+    "D1", "D2", "D3", "D4", "D7", "D9", "D10", "D12",
+    "D16", "D20", "D24", "D27", "D30", "D40", "D45", "D60",
+}
 
 
 class AstroEngine:
@@ -42,9 +56,8 @@ class AstroEngine:
             
             # Handle float format
             return float(tz_str)
-        except Exception as e:
-            print(f"Warning: Error parsing timezone '{tz_str}': {e}")
-            return None
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid timezone offset: {tz_str!r}") from e
     
     def generate_full_chart(
         self,
@@ -68,7 +81,7 @@ class AstroEngine:
             latitude: Latitude coordinate (REQUIRED for accurate calculations)
             longitude: Longitude coordinate (REQUIRED for accurate calculations)
             timezone: GMT timezone offset as string (e.g., '+5.5' for IST, '-5.0' for EST)
-                     If not provided, will be estimated from longitude
+                      (REQUIRED; use the historical local offset for the birth date)
         
         Returns:
             Dictionary with complete chart data
@@ -80,6 +93,22 @@ class AstroEngine:
                     "Latitude and Longitude are required for accurate astrological calculations. "
                     "Place name alone cannot provide precise astronomical positions."
                 )
+            if not -90 <= latitude <= 90:
+                raise ValueError("Latitude must be between -90 and 90 degrees.")
+            if not -180 <= longitude <= 180:
+                raise ValueError("Longitude must be between -180 and 180 degrees.")
+            if timezone is None:
+                raise ValueError(
+                    "Timezone offset is required for accurate astrological calculations."
+                )
+
+            if charts:
+                requested_charts = [chart.upper() for chart in charts]
+                invalid_charts = sorted(set(requested_charts) - SUPPORTED_CHARTS)
+                if invalid_charts:
+                    raise ValueError(f"Unsupported divisional charts: {', '.join(invalid_charts)}")
+                # Full-response calculations depend on D1, so it is always included.
+                charts = list(dict.fromkeys(["D1", *requested_charts]))
             
             # Parse date and time components
             year, month, day = dob.split('-')
@@ -91,22 +120,10 @@ class AstroEngine:
                 int(hour), int(minute), int(second)
             )
             
-            # Calculate timezone offset if not provided
-            if timezone is None:
-                # Rough approximation: 15 degrees longitude = 1 hour offset from GMT
-                tz_offset = longitude / 15.0
-                # Round to nearest 0.5 hour
-                tz_offset = round(tz_offset * 2) / 2
-            else:
-                # Convert string timezone to float (handles +5:30, 5.5, etc.)
-                tz_offset = self._parse_timezone(timezone)
-                
-                # Fallback to longitude-based estimate if parsing failed
-                if tz_offset is None:
-                    # Rough approximation: 15 degrees longitude = 1 hour offset from GMT
-                    tz_offset = longitude / 15.0
-                    # Round to nearest 0.5 hour
-                    tz_offset = round(tz_offset * 2) / 2
+            # Convert string timezone to float (handles +5:30, 5.5, etc.)
+            tz_offset = self._parse_timezone(timezone)
+            if not -12 <= tz_offset <= 14:
+                raise ValueError("Timezone offset must be between -12 and +14 hours.")
             
             # Store birth data for reference
             self.birth_data = {
@@ -141,9 +158,10 @@ class AstroEngine:
                 
                 # Use our custom SwissEph-based divisional chart engine
                 divisional_charts = self._calculate_divisional_charts_swisseph(jd_ut, latitude, longitude, charts)
-            except ImportError:
-                # Fallback to jyotishganit if SwissEph not available
-                divisional_charts = self._extract_divisional_charts(chart, charts_filter=charts)
+            except ImportError as e:
+                raise RuntimeError(
+                    "Swiss Ephemeris is required for deterministic divisional-chart calculations."
+                ) from e
             
             # Extract and format output
             # Meta-Tagging (Phase 5 - Institutional Confidence)
@@ -190,30 +208,19 @@ class AstroEngine:
                 "meta": engine_meta,
                 "divisional_charts": divisional_charts,
                 "balas": self._extract_balas(chart),
-                "dashas": self._extract_dashas(chart, birth_datetime=birth_datetime),
+                "dashas": self._extract_dashas(
+                    chart,
+                    birth_datetime=birth_datetime,
+                    moon_long=divisional_charts["D1"]["planets"]["Moon"]["total_degree"],
+                ),
                 "nakshatra": self._extract_nakshatras(chart),
                 "panchang": self._extract_panchang(chart),
                 "favorable_points": self._calculate_favorable_points(chart),
                 "yogas": self._extract_yogas(chart),
-                "doshas": self._calculate_doshas(chart),
-                "yogas": self._extract_yogas(chart),
                 "doshas": self._calculate_doshas(chart)
             }
             
-            # Add Phase 1 enhancements: Astronomical Details, Sunrise/Sunset, KP Cusps
-            try:
-                output["astronomical_details"] = self._get_astronomical_constants(jd_ut, birth_datetime, tz_offset, longitude)
-                output["sunrise_sunset"] = self._calculate_sunrise_sunset(jd_ut, latitude, longitude, tz_offset, birth_datetime)
-                
-                # Get house cusps for KP calculation (already calculated in swisseph block)
-                import swisseph as swe
-                swe.set_sid_mode(swe.SIDM_LAHIRI)
-                cusps, ascmc = swe.houses_ex(jd_ut, latitude, longitude, b'P', swe.FLG_SIDEREAL)
-                output["kp_cusps"] = self._calculate_kp_cusps(list(cusps))
-            except Exception as phase1_err:
-                output["meta"]["phase1_error"] = str(phase1_err)
-            
-            # Add Phase 2 enhancements: Bhavabala, Yogini Dasha, Char Dasha
+            # Add Bhavabala, Yogini Dasha, and Char Dasha.
             try:
                 # Extract Bhavabala from jyotishganit chart.charts structure
                 d1_obj = getattr(chart, 'd1_chart', None)
@@ -254,77 +261,24 @@ class AstroEngine:
                 # Calculate Char Dasha with planet positions
                 output["char_dasha"] = self._calculate_char_dasha(birth_datetime, lagna_sign_idx, d1_planets_full)
 
-                # DEBUG PROBE: Dump chart structure to find Bhavabala
-                try:
-                    debug_info = {}
-                    if hasattr(chart, '__dict__'):
-                        debug_info["attrs"] = list(chart.__dict__.keys())
-                    
-                    # Probe d1_chart specifically
-                    if hasattr(chart, 'd1_chart'):
-                        d1 = chart.d1_chart
-                        debug_info["d1_attrs"] = dir(d1)
-                        debug_info["d1_bala_candidates"] = [a for a in dir(d1) if 'bala' in a.lower()]
-                        
-                        # Check inside points/planets/houses
-                        if hasattr(d1, 'points'):
-                             debug_info["d1_points_keys"] = list(d1.points.keys()) if isinstance(d1.points, dict) else str(type(d1.points))
-
-                    output["debug_bhavabala"] = debug_info
-                except:
-                    pass
-                
             except Exception as phase2_err:
-                import traceback
-                output["meta"]["phase2_error"] = str(phase2_err)
-                output["meta"]["phase2_traceback"] = traceback.format_exc()
+                raise RuntimeError("Extended dasha calculation failed") from phase2_err
             
             # Enrich with additional calculations (KP, Avasthas, Transits, etc.)
             self._enrich_chart_data(output, birth_datetime, latitude, longitude, tz_offset)
 
-             # --- EXTENDED CALCULATIONS FOR TOP-LEVEL KEYS ---
-        
-            # 2. Astronomical Details
             output['astronomical_details'] = self._get_astronomical_constants(jd_ut, birth_datetime, tz_offset, longitude)
-            
-            # 3. KP Cusps (Recalculate cusps here for top-level usage)
-            try:
-                import swisseph as swe
-                cusps_x, ascmc_x = swe.houses_ex(jd_ut, latitude, longitude, b'P', swe.FLG_SIDEREAL)
-                output['kp_cusps'] = self._calculate_kp_cusps(cusps_x)
-            except:
-                 output['kp_cusps'] = {}
-
-            # 4. Jaimini Karakas (using enriched planet data)
-            if 'D1' in output['divisional_charts']:
-                 d1_p = output['divisional_charts']['D1']['planets']
-                 output['jaimini_karakas'] = self._calculate_jaimini_karakas(d1_p)
-            
-            # 5. Transits
-            try:
-                 asc_s = "Aries"
-                 if 'D1' in output['divisional_charts'] and 'ascendant' in output['divisional_charts']['D1']:
-                     asc_s = output['divisional_charts']['D1']['ascendant']['sign']
-                 
-                 moon_s = "Aries"
-                 if 'D1' in output['divisional_charts'] and 'planets' in output['divisional_charts']['D1']:
-                     if 'Moon' in output['divisional_charts']['D1']['planets']:
-                          moon_s = output['divisional_charts']['D1']['planets']['Moon']['sign']
-                
-                 output['current_transits'] = self._calculate_transits(asc_s, moon_s)
-            except:
-                 pass
-                 
-            # 6. Sunrise/Sunset
+            import swisseph as swe
+            cusps_x, _ = swe.houses_ex(jd_ut, latitude, longitude, b'P', swe.FLG_SIDEREAL)
+            output['kp_cusps'] = self._calculate_kp_cusps(cusps_x)
             output['sunrise_sunset'] = self._calculate_sunrise_sunset(jd_ut, latitude, longitude, tz_offset)
             
             return output
             
+        except ValueError:
+            raise
         except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-            print(f"DETAILED ERROR in generate_full_chart:\n{error_details}")
-            raise ValueError(f"Error generating chart: {str(e)}")
+            raise RuntimeError("Error generating chart") from e
     
     
     def _extract_divisional_charts(self, chart, charts_filter=None) -> Dict[str, Any]:
@@ -382,78 +336,8 @@ class AstroEngine:
         return varga_degree
 
     def _calculate_varga_ascendant(self, d1_asc_total_degree: float, harmonic: int) -> tuple:
-        """
-        Calculate the ascendant sign for a divisional chart (Varga) using Parashara rules.
-        
-        Args:
-            d1_asc_total_degree: D1 Lagna total degree (0-360, sidereal)
-            harmonic: The divisor (e.g., 9 for D9 Navamsa, 2 for D2 Hora, etc.)
-        
-        Returns:
-            Tuple of (sign_name, sign_index_1based, degree_in_sign)
-        """
-        signs = ["", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", 
-                 "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
-        
-        # D1 sign (1-based)
-        d1_sign = int(d1_asc_total_degree / 30) + 1
-        d1_deg_in_sign = d1_asc_total_degree % 30
-        
-        # Division span within each sign
-        division_span = 30.0 / harmonic
-        
-        # Which division (0-indexed) within the D1 sign does the Lagna fall?
-        division_index = int(d1_deg_in_sign / division_span)
-        
-        # Calculate degree within the varga sign
-        varga_degree = ((d1_deg_in_sign % division_span) / division_span) * 30.0
-        
-        # Default: Simple harmonic (used for most charts like D2, D3, D4, D7, D10, D12, etc.)
-        # The varga sign is calculated by adding the division index to a start sign
-        
-        if harmonic == 9:  # D9 Navamsa - special rules
-            # Navamsa starting signs based on D1 sign's element:
-            # Fire (Aries=1, Leo=5, Sag=9): Start from Aries
-            # Earth (Taurus=2, Virgo=6, Cap=10): Start from Capricorn  
-            # Air (Gemini=3, Libra=7, Aqua=11): Start from Libra
-            # Water (Cancer=4, Scorpio=8, Pisces=12): Start from Cancer
-            
-            if d1_sign in [1, 5, 9]:  # Fire signs
-                start_sign = 1  # Aries
-            elif d1_sign in [2, 6, 10]:  # Earth signs
-                start_sign = 10  # Capricorn
-            elif d1_sign in [3, 7, 11]:  # Air signs
-                start_sign = 7  # Libra
-            else:  # Water signs [4, 8, 12]
-                start_sign = 4  # Cancer
-            
-            varga_sign = ((start_sign - 1) + division_index) % 12 + 1
-            
-        elif harmonic == 2:  # D2 Hora
-            # Sun's Hora (Leo) for odd signs, Moon's Hora (Cancer) for even
-            if d1_sign % 2 == 1:  # Odd sign
-                varga_sign = 5 if division_index == 0 else 4  # Leo then Cancer
-            else:  # Even sign
-                varga_sign = 4 if division_index == 0 else 5  # Cancer then Leo
-                
-        elif harmonic == 3:  # D3 Drekkana
-            # Each sign divided into 3 parts of 10 degrees
-            # 1st Drekkana: Same sign, 2nd: 5th from it, 3rd: 9th from it
-            if division_index == 0:
-                varga_sign = d1_sign
-            elif division_index == 1:
-                varga_sign = ((d1_sign - 1 + 4) % 12) + 1  # 5th sign
-            else:
-                varga_sign = ((d1_sign - 1 + 8) % 12) + 1  # 9th sign
-                
-        else:
-            # Generic calculation for other harmonics (D4, D7, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60)
-            # Formula: ((d1_sign - 1) * harmonic + division_index) % 12 + 1
-            varga_sign = ((d1_sign - 1) * harmonic + division_index) % 12 + 1
-        
-        sign_name = signs[varga_sign] if 1 <= varga_sign <= 12 else "Unknown"
-        
-        return (sign_name, varga_sign, varga_degree)
+        """Calculate varga Lagna with the same rules used for planets."""
+        return self._get_planet_varga_sign(d1_asc_total_degree, harmonic)
 
     def _get_planet_varga_sign(self, total_degree: float, harmonic: int) -> tuple:
         """
@@ -467,136 +351,72 @@ class AstroEngine:
         Returns:
             Tuple of (sign_name, sign_index_1based, degree_in_varga_sign)
         """
-        signs = ["", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", 
+        signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
                  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
-        
-        d1_sign = int(total_degree / 30) + 1  # 1-based
+
+        total_degree %= 360
+        d1_sign = int(total_degree / 30)  # zero-based
         deg_in_sign = total_degree % 30
         division_span = 30.0 / harmonic
-        division_index = int(deg_in_sign / division_span)
+        division_index = min(int(deg_in_sign / division_span), harmonic - 1)
         varga_degree = ((deg_in_sign % division_span) / division_span) * 30.0
-        
-        if harmonic == 2:  # D2 Hora
-            # First half = Sun's hora (Leo), Second half = Moon's hora (Cancer)
-            # For odd signs: 0-15° = Leo, 15-30° = Cancer
-            # For even signs: 0-15° = Cancer, 15-30° = Leo
-            if d1_sign % 2 == 1:  # Odd sign
-                varga_sign = 5 if deg_in_sign < 15 else 4
-            else:
-                varga_sign = 4 if deg_in_sign < 15 else 5
-                
-        elif harmonic == 3:  # D3 Drekkana
-            if division_index == 0:
-                varga_sign = d1_sign
-            elif division_index == 1:
-                varga_sign = ((d1_sign - 1 + 4) % 12) + 1
-            else:
-                varga_sign = ((d1_sign - 1 + 8) % 12) + 1
-                
-        elif harmonic == 9:  # D9 Navamsa
-            # Starting sign based on element of D1 sign
-            if d1_sign in [1, 5, 9]:  # Fire
-                start = 1
-            elif d1_sign in [2, 6, 10]:  # Earth
-                start = 10
-            elif d1_sign in [3, 7, 11]:  # Air
-                start = 7
-            else:  # Water
-                start = 4
-            varga_sign = ((start - 1) + division_index) % 12 + 1
-            
-        elif harmonic == 7:  # D7 Saptamsa
-            # Odd signs: Count from same sign
-            # Even signs: Count from 7th sign
-            if d1_sign % 2 == 1:
-                varga_sign = ((d1_sign - 1) + division_index) % 12 + 1
-            else:
-                start = ((d1_sign - 1 + 6) % 12) + 1  # 7th from d1_sign
-                varga_sign = ((start - 1) + division_index) % 12 + 1
-                
-        elif harmonic == 10:  # D10 Dasamsa
-            # Odd signs: Count from same sign
-            # Even signs: Count from 9th sign
-            if d1_sign % 2 == 1:
-                varga_sign = ((d1_sign - 1) + division_index) % 12 + 1
-            else:
-                start = ((d1_sign - 1 + 8) % 12) + 1  # 9th from d1_sign
-                varga_sign = ((start - 1) + division_index) % 12 + 1
-                
-        elif harmonic == 12:  # D12 Dwadasamsa
-            # Count from same sign
-            varga_sign = ((d1_sign - 1) + division_index) % 12 + 1
-            
-        elif harmonic == 16:  # D16 Shodasamsa
-            # Movable signs: from Aries, Fixed: from Leo, Dual: from Sagittarius
-            if d1_sign in [1, 4, 7, 10]:  # Movable
-                start = 1
-            elif d1_sign in [2, 5, 8, 11]:  # Fixed
-                start = 5
-            else:  # Dual
-                start = 9
-            varga_sign = ((start - 1) + division_index) % 12 + 1
-            
-        elif harmonic == 20:  # D20 Vimshamsa
-            # Movable: Aries, Fixed: Sagittarius, Dual: Leo
-            if d1_sign in [1, 4, 7, 10]:
-                start = 1
-            elif d1_sign in [2, 5, 8, 11]:
-                start = 9
-            else:
-                start = 5
-            varga_sign = ((start - 1) + division_index) % 12 + 1
-            
-        elif harmonic == 24:  # D24 Chaturvimshamsa
-            # Odd signs: from Leo, Even signs: from Cancer
-            if d1_sign % 2 == 1:
-                start = 5
-            else:
-                start = 4
-            varga_sign = ((start - 1) + division_index) % 12 + 1
-            
-        elif harmonic == 27:  # D27 Saptavimshamsa/Bhamsa
-            # Fire: Aries, Earth: Cancer, Air: Libra, Water: Capricorn
-            if d1_sign in [1, 5, 9]:
-                start = 1
-            elif d1_sign in [2, 6, 10]:
-                start = 4
-            elif d1_sign in [3, 7, 11]:
-                start = 7
-            else:
-                start = 10
-            varga_sign = ((start - 1) + division_index) % 12 + 1
-            
-        elif harmonic == 30:  # D30 Trimshamsa
-            # Special rules based on degrees and odd/even sign
-            if d1_sign % 2 == 1:  # Odd sign
-                if deg_in_sign < 5:
-                    varga_sign = 1  # Aries (Mars)
-                elif deg_in_sign < 10:
-                    varga_sign = 11  # Aquarius (Saturn)
-                elif deg_in_sign < 18:
-                    varga_sign = 9  # Sagittarius (Jupiter)
-                elif deg_in_sign < 25:
-                    varga_sign = 3  # Gemini (Mercury)
-                else:
-                    varga_sign = 7  # Libra (Venus)
-            else:  # Even sign - reverse order
-                if deg_in_sign < 5:
-                    varga_sign = 2  # Taurus (Venus)
-                elif deg_in_sign < 12:
-                    varga_sign = 6  # Virgo (Mercury)
-                elif deg_in_sign < 20:
-                    varga_sign = 12  # Pisces (Jupiter)
-                elif deg_in_sign < 25:
-                    varga_sign = 10  # Capricorn (Saturn)
-                else:
-                    varga_sign = 8  # Scorpio (Mars)
-                    
-        else:  # Generic for D4, D40, D45, D60 etc.
-            varga_sign = ((d1_sign - 1) * harmonic + division_index) % 12 + 1
-        
-        sign_name = signs[varga_sign] if 1 <= varga_sign <= 12 else "Unknown"
-        return (sign_name, varga_sign, varga_degree)
+
+        if harmonic == 1:
+            varga_sign = d1_sign
+        elif harmonic == 2:  # Hora: Sun/Moon horas, reversed for even signs.
+            varga_sign = (4, 3)[division_index] if d1_sign % 2 == 0 else (3, 4)[division_index]
+        elif harmonic == 3:  # Drekkana: 1st, 5th, 9th from the natal sign.
+            varga_sign = (d1_sign + division_index * 4) % 12
+        elif harmonic == 4:  # Chaturthamsa: 1st, 4th, 7th, 10th.
+            varga_sign = (d1_sign + division_index * 3) % 12
+        elif harmonic == 7:  # Saptamsa: natal sign for odd, 7th for even.
+            start = d1_sign if d1_sign % 2 == 0 else d1_sign + 6
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 9:  # Navamsa: Aries/Capricorn/Libra/Cancer by element.
+            start = (0, 9, 6, 3)[d1_sign % 4]
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 10:  # Dasamsa: natal sign for odd, 9th for even.
+            start = d1_sign if d1_sign % 2 == 0 else d1_sign + 8
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 12:  # Dwadasamsa: count from the natal sign.
+            varga_sign = (d1_sign + division_index) % 12
+        elif harmonic == 16:  # Shodasamsa: Aries/Leo/Sagittarius by modality.
+            start = (0, 4, 8)[d1_sign % 3]
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 20:  # Vimsamsa: Aries/Sagittarius/Leo by modality.
+            start = (0, 8, 4)[d1_sign % 3]
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 24:  # Siddhamsa: Leo for odd, Cancer for even.
+            start = 4 if d1_sign % 2 == 0 else 3
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 27:  # Bhamsa: Aries/Cancer/Libra/Capricorn by element.
+            start = (0, 3, 6, 9)[d1_sign % 4]
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 30:  # Trimsamsa uses unequal Parashara divisions.
+            divisions = (
+                ((5, 0), (10, 10), (18, 8), (25, 2), (30, 6))
+                if d1_sign % 2 == 0
+                else ((5, 1), (12, 5), (20, 11), (25, 9), (30, 7))
+            )
+            lower = 0.0
+            for upper, sign in divisions:
+                if deg_in_sign < upper:
+                    varga_sign = sign
+                    varga_degree = (deg_in_sign - lower) / (upper - lower) * 30.0
+                    break
+                lower = upper
+        elif harmonic == 40:  # Khavedamsa: Aries for odd, Libra for even.
+            start = 0 if d1_sign % 2 == 0 else 6
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 45:  # Akshavedamsa: Aries/Leo/Sagittarius by modality.
+            start = (0, 4, 8)[d1_sign % 3]
+            varga_sign = (start + division_index) % 12
+        elif harmonic == 60:  # Shashtiamsa: count from the natal sign.
+            varga_sign = (d1_sign + division_index) % 12
+        else:
+            raise ValueError(f"Unsupported varga harmonic: D{harmonic}")
+
+        return signs[varga_sign], varga_sign + 1, varga_degree
 
     def _calculate_divisional_charts_swisseph(self, jd_ut: float, lat: float, lon: float, 
                                                charts_filter: list = None) -> Dict[str, Any]:
@@ -964,11 +784,7 @@ class AstroEngine:
             output['current_transits'] = self._calculate_transits(output['divisional_charts']['D1']['ascendant']['sign'], output['divisional_charts']['D1']['planets']['Moon']['sign'])
 
         except Exception as e:
-             import traceback
-             print(f"Enrichment Error: {e}")
-             trace = traceback.format_exc()
-             output['meta']['enrichment_error'] = f"{str(e)} | {trace}"
-             # pass
+            raise RuntimeError("Swiss Ephemeris enrichment failed") from e
         
     def _calculate_jaimini_karakas(self, planets_data):
         """Calculate 7 Chara Karakas based on degrees"""
@@ -1468,7 +1284,12 @@ class AstroEngine:
         except Exception as e:
             return {"error": str(e)}
     
-    def _extract_dashas(self, chart, birth_datetime: datetime = None) -> Dict[str, Any]:
+    def _extract_dashas(
+        self,
+        chart,
+        birth_datetime: datetime = None,
+        moon_long: float = None,
+    ) -> Dict[str, Any]:
         """
         Extract Vimshottari Dasha with FULL 5-LEVEL DEPTH (Up to Prana Dasha).
         
@@ -1486,8 +1307,8 @@ class AstroEngine:
         
         try:
             # 1. Get Moon Longitude for Seed
-            moon_deg = None
-            if hasattr(chart.d1_chart, 'planets'):
+            moon_deg = moon_long
+            if moon_deg is None and hasattr(chart.d1_chart, 'planets'):
                 for p in chart.d1_chart.planets:
                     if p.celestial_body == 'Moon':
                          sign_map = {"Aries":0, "Taurus":1, "Gemini":2, "Cancer":3, "Leo":4, "Virgo":5, 
@@ -1720,31 +1541,6 @@ class AstroEngine:
             curr_date = end_date
             
         return timeline
-
-    def _original_extract_dashas_logic(self, chart) -> Dict[str, Any]:
-        # PASTE THE ORIGINAL LOGIC HERE TO PRESERVE FUNCTIONALITY
-        dashas = {"vimshottari": {"mahadasha": [], "current_dasha": None}}
-        try:
-             # ... Logic copied from original ...
-             if hasattr(chart, 'dashas') and chart.dashas:
-                 # Populate verified logic
-                 if hasattr(chart.dashas, 'current'):
-                     dashas['vimshottari']['current_dasha'] = chart.dashas.current
-                 
-                 # ... (Rest of original extraction)
-                 # Converting 'upcoming' to list
-                 if hasattr(chart.dashas, 'upcoming'):
-                    upcoming = chart.dashas.upcoming
-                    if isinstance(upcoming, dict) and 'mahadashas' in upcoming:
-                        for lord, period in upcoming['mahadashas'].items():
-                            dashas['vimshottari']['mahadasha'].append({
-                                "lord": lord,
-                                "start_date": str(period.get('start', '')),
-                                "end_date": str(period.get('end', ''))
-                            })
-        except:
-            pass
-        return dashas
 
     def _calculate_doshas(self, chart) -> Dict[str, Any]:
         """Calculate Manglik, Kaal Sarp, and other doshas"""
@@ -2679,7 +2475,7 @@ class AstroEngine:
             Dictionary with Char Dasha periods
         """
         try:
-            from datetime import timedelta
+            from dateutil.relativedelta import relativedelta
             
             planet_positions = planet_positions or {}
             
@@ -2694,9 +2490,6 @@ class AstroEngine:
                 0: "Mars", 1: "Venus", 2: "Mercury", 3: "Moon", 4: "Sun", 5: "Mercury",
                 6: "Venus", 7: "Mars", 8: "Jupiter", 9: "Saturn", 10: "Saturn", 11: "Jupiter"
             }
-            
-            # Odd signs (count forward): 0, 2, 4, 6, 8, 10
-            odd_signs = [0, 2, 4, 6, 8, 10]
             
             # Helper to count planets in a sign
             planets_in_sign = {i: 0 for i in range(12)}
@@ -2787,12 +2580,6 @@ class AstroEngine:
                 lord_default_signs = [i for i, l in sign_lords.items() if l == lord_name]
                 return lord_default_signs[0] if lord_default_signs else sign_idx
             
-            def get_dasha_duration(sign_idx: int) -> int:
-                """
-                Calculate dasha duration using Padakrama.
-                """
-                lord_sign = get_lord_sign(sign_idx)
-                
             # Method: KN Rao's Chara Dasha System
             # Direct Group (Count Forward): Aries, Taurus, Gemini, Libra, Scorpio, Sagittarius
             # Indirect Group (Count Backward): Cancer, Leo, Virgo, Capricorn, Aquarius, Pisces
@@ -2851,6 +2638,13 @@ class AstroEngine:
                     return 12
                 return count
             
+            direction_map = {
+                0: 1, 1: 1, 2: 1,
+                3: -1, 4: -1, 5: -1,
+                6: 1, 7: 1, 8: -1,
+                9: -1, 10: -1, 11: 1,
+            }
+
             def get_dasha_sequence(lagna_idx: int) -> list:
                 """
                 Get the sequence of signs for Char Dasha.
@@ -2904,23 +2698,6 @@ class AstroEngine:
                 1 = Forward, -1 = Backward.
                 """
                 
-                # key: sign_index (0-11) -> direction (1 or -1)
-                # Maps based exclusively on KN Rao / AstroSage parity
-                direction_map = {
-                    0: 1,   # Aries: Fwd
-                    1: 1,   # Taurus: Fwd
-                    2: 1,   # Gemini: Fwd
-                    3: -1,  # Cancer: Bwd
-                    4: -1,  # Leo: Bwd
-                    5: -1,  # Virgo: Bwd
-                    6: 1,   # Libra: Fwd
-                    7: 1,   # Scorpio: Fwd
-                    8: -1,  # Sagittarius: Bwd (User Req)
-                    9: -1,  # Capricorn: Bwd
-                    10: -1, # Aquarius: Bwd
-                    11: 1   # Pisces: Fwd
-                }
-                
                 direction = direction_map.get(lagna_idx, 1)
                 
                 seq = []
@@ -2944,8 +2721,7 @@ class AstroEngine:
                 for sign_idx in sequence:
                     duration = get_dasha_duration(sign_idx)
                     
-                    period_days = duration * 365.25
-                    end_date = current_date + timedelta(days=period_days)
+                    end_date = current_date + relativedelta(years=duration)
                     
                     dasha_periods.append({
                         "sign": signs[sign_idx],
@@ -2980,8 +2756,8 @@ class AstroEngine:
                 "maha_dasha": dasha_periods,
                 "current": current_dasha,
                 "lagna_sign": signs[lagna_sign_idx],
-                # FIX: Corrected direction label (odd signs go backward, even go forward)
-                "sequence_direction": "backward" if lagna_sign_idx in odd_signs else "forward"
+                "sequence_direction": "forward" if direction_map[lagna_sign_idx] == 1 else "backward",
+                "method": "KN Rao Chara Dasha with Jaimini co-lord strength rules",
             }
             
         except Exception as e:
